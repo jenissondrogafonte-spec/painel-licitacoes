@@ -1,49 +1,14 @@
-<script>
-document.addEventListener('DOMContentLoaded', async () => {
-  const status = document.getElementById('status') || document.createElement('div');
-  status.id = 'status';
-  status.style.color = 'green';
-  status.style.fontWeight = 'bold';
-  document.body.appendChild(status);
-
-  // CSV direto do portal de dados (equivalente ao módulo 07 – Contratações PNCP) [file:1]
-  const csvUrl = 'https://dados.gov.br/dados/conjuntos-dados/compras-publicas-do-governo-federal/resources/comprasGOV-anual-VWFTPNCPCOMPRA-latest.csv';
-  
-  try {
-    status.textContent = '🔄 Carregando CSV de Contratações PNCP (anual)...';
-    
-    const resp = await fetch(csvUrl);
-    if (!resp.ok) throw new Error('CSV não encontrado');
-    
-    const csvText = await resp.text();
-    const linhas = csvText.split('\n').slice(1, 11); // primeiras 10 linhas
-    
-    status.textContent = `✅ CSV carregado! ${linhas.length} registros preview.`;
-
-    const tbody = document.getElementById('tbody');
-    if (tbody) {
-      linhas.forEach(linha => {
-        const cols = linha.split(',');
-        if (cols.length >= 6) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${cols[0]}</td> <!-- ID -->
-            <td>${cols[1]}</td> <!-- Órgão -->
-            <td>${cols[2]}</td> <!-- UASG -->
-            <td>${cols[3]}</td> <!-- Data -->
-            <td>${cols[4]}</td> <!-- Valor Estimado -->
-            <td>${cols[5]}</td> <!-- Valor Homologado -->
-          `;
-          tbody.appendChild(tr);
-        }
-      });
-    }
-    
-    console.log('CSV preview:', linhas.slice(0,3));
-    
-  } catch (e) {
-    status.textContent = '❌ Erro CSV: ' + e.message;
-    status.style.color = 'red';
-  }
-});
-</script>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel PNCP - Conectado</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f8fafc; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 20px 0; }
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; padding: 15px; background: #eef2f7; border-radius: 8px; }
+    input, button { padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+    button { background: #003366; color: white; border: none; cursor: pointer; font-weight: bold; }
+    button:hover { background: #002855; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th { background
