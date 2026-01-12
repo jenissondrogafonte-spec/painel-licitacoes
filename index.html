@@ -1,6 +1,156 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+  <meta charset="UTF-8">
+  <title>Painel PNCP - Conectado</title>
+  <style>
+    :root { --primary: #003366; --bg: #f8fafc; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #eef2f7; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+    input, button { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; }
+    button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
+    button:hover { filter: brightness(0.9); }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th { background: var(--primary); color: white; padding: 8px; text-align: left; font-size: 12px; }
+    td { padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; }
+    .status { font-weight: bold; margin-bottom: 10px; display: block; color: green; }
+    .error { color: #b91c1c; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>✅ Conexão Estabelecida com o PNCP</h2>
+
+  <div class="filter-grid">
+    <div>
+      <label>Data Inicial (publicação)</label>
+      <input type="date" id="dataIni" value="2024-01-01">
+    </div>
+    <div>
+      <label>Data Final (publicação)</label>
+      <input type="date" id="dataFim" value="2024-03-31">
+    </div>
+    <div>
+      <label>CNPJ Vencedor (opcional)</label>
+      <input type="text" id="cnpj" placeholder="Filtrar CNPJ Vencedor">
+    </div>
+    <div style="display:flex;align-items:flex-end;">
+      <button onclick="buscar()">Atualizar Busca</button>
+    </div>
+  </div>
+
+  <div id="status" class="status"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Id Contratação</th>
+        <th>Órgão</th>
+        <th>UASG</th>
+        <th>Objeto</th>
+        <th>Data Publicação</th>
+        <th>Valor Estimado</th>
+        <th>Valor Homologado</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      <!-- linhas geradas via JS -->
+    </tbody>
+  </table>
+</div>
+
+<script>
+const BASE_URL = 'https://dadosabertos.compras.gov.br';
+
+// Função principal de busca no módulo 07 - 1_consultarContratacoes_PNCP_14133
+async function buscar(pagina = 1) {
+  const dataIni = document.getElementById('dataIni').value;
+  const dataFim = document.getElementById('dataFim').value;
+  const cnpj = document.getElementById('cnpj').value.trim();
+
+  const statusEl = document.getElementById('status');
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  statusEl.textContent = 'Consultando contratações no PNCP...';
+
+  try {
+    const params = new URLSearchParams();
+    params.append('pagina', pagina);
+    params.append('tamanhoPagina', 50); // limite até 500, conforme manual
+    if (dataIni) params.append('dataPublicacaoInicial', dataIni);
+    if (dataFim) params.append('dataPublicacaoFinal', dataFim);
+    if (cnpj) params.append('niFornecedor', cnpj); // campo de filtro para fornecedor, conforme módulo de contratações [file:2]
+
+    const url = `${BASE_URL}/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?` + params.toString();
+
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      throw new Error('Erro HTTP ' + resp.status);
+    }
+
+    const data = await resp.json();
+
+    const resultados = data.resultado || [];
+    if (resultados.length === 0) {
+      statusEl.textContent = 'Nenhuma contratação encontrada para os filtros informados.';
+      return;
+    }
+
+    // Preenche a tabela com alguns campos principais (ajuste conforme o payload do manual) [file:2]
+    resultados.forEach(item => {
+      const tr = document.createElement('tr');
+
+      const tdId = document.createElement('td');
+      tdId.textContent = item.idCompra || item.identificador || '';
+      tr.appendChild(tdId);
+
+      const tdOrgao = document.createElement('td');
+      tdOrgao.textContent = item.nomeOrgao || '';
+      tr.appendChild(tdOrgao);
+
+      const tdUasg = document.createElement('td');
+      tdUasg.textContent = item.codigoUasg || item.uasg || '';
+      tr.appendChild(tdUasg);
+
+      const tdObjeto = document.createElement('td');
+      tdObjeto.textContent = item.objeto || item.descricaoObjeto || '';
+      tr.appendChild(tdObjeto);
+
+      const tdDataPub = document.createElement('td');
+      tdDataPub.textContent = item.dataPublicacao || item.dataAbertura || '';
+      tr.appendChild(tdDataPub);
+
+      const tdValorEst = document.createElement('td');
+      tdValorEst.textContent = item.valorEstimadoTotal || item.valorestimadototal || '';
+      tr.appendChild(tdValorEst);
+
+      const tdValorHom = document.createElement('td');
+      tdValorHom.textContent = item.valorHomologadoTotal || item.valorhomologadototal || '';
+      tr.appendChild(tdValorHom);
+
+      tbody.appendChild(tr);
+    });
+
+    statusEl.textContent = `Exibindo ${resultados.length} registros (página ${data.pagina || pagina} de ${data.totalPaginas || '?'}).`;
+
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = 'Erro ao consultar a API de contratações: ' + e.message;
+    statusEl.classList.add('error');
+  }
+}
+
+// dispara busca inicial ao carregar a página
+buscar();
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
     <meta charset="UTF-8">
     <title>Painel PNCP - Conectado</title>
     <style>
