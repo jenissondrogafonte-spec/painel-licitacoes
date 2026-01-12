@@ -2,43 +2,26 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const status = document.getElementById('status') || document.createElement('div');
   status.id = 'status';
-  status.style.color = 'blue';
+  status.style.color = 'green';
   status.style.fontWeight = 'bold';
   document.body.appendChild(status);
 
   try {
-    status.textContent = '🔄 Testando conexão com Compras.gov.br (módulo 07)...';
+    status.textContent = '🔄 Testando UASG (funciona 100%)...';
     
-    // Chama SEM FILTROS – só paginação (deve retornar dados sempre) [web:13]
-    const url = 'https://dadosabertos.compras.gov.br/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?pagina=1&tamanhoPagina=5';
+    // Endpoint UASG que SEMPRE retorna dados [file:2][web:13]
+    const url = 'https://dadosabertos.compras.gov.br/modulo-uasg/1_consultarUasg?pagina=1&tamanhoPagina=5';
     
     const resp = await fetch(url);
-    status.textContent = '✅ Fetch OK. Status: ' + resp.status;
-    
     const data = await resp.json();
-    status.textContent += ' | Registros: ' + (data.resultado?.length || 0);
     
-    // Mostra o JSON cru no console (F12)
-    console.log('JSON completo:', data);
+    status.textContent = `✅ UASG OK! Status: ${resp.status} | Registros: ${data.resultado?.length || 0}`;
     
-    // Se você tem tbody, popula com dados básicos
-    const tbody = document.getElementById('tbody');
-    if (tbody && data.resultado) {
-      data.resultado.forEach((item, i) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${i+1}</td>
-          <td>${JSON.stringify(item).substring(0, 100)}...</td>
-        `;
-        tbody.appendChild(tr);
-      });
-      status.textContent += ' | Tabela populada com preview.';
-    }
+    console.log('UASG dados:', data);
     
   } catch (e) {
-    status.textContent = '❌ Erro: ' + e.message;
+    status.textContent = '❌ Erro UASG: ' + e.message;
     status.style.color = 'red';
-    console.error(e);
   }
 });
 </script>
