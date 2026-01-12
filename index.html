@@ -2,90 +2,117 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Consulta PNCP + Fornecedor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel PNCP - Módulo 07</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f0f2f5; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { color: #003366; margin-bottom: 20px; }
-        button { background: #003366; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #0055aa; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background: #003366; color: white; }
-        tr:hover { background: #f9f9f9; }
-        .btn-cnpj { color: #0055aa; cursor: pointer; text-decoration: underline; font-weight: bold; background: none; border: none; }
-        #status { margin-left: 10px; font-weight: bold; }
+        :root { --primary: #003366; --accent: #0055aa; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: var(--bg); }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h2 { color: var(--primary); border-bottom: 3px solid var(--primary); padding-bottom: 10px; margin-top: 0; }
+        .controls { margin-bottom: 25px; display: flex; align-items: center; gap: 15px; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: var(--accent); transform: translateY(-1px); }
+        #status { font-weight: bold; font-size: 14px; transition: 0.3s; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; overflow: hidden; border-radius: 8px; }
+        th { background: var(--primary); color: white; padding: 15px; text-align: left; font-size: 14px; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; color: #333; }
+        tr:hover { background: #f1f5f9; }
+        
+        .cnpj-btn { color: var(--accent); font-weight: bold; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; }
+        .badge { background: #e0e7ff; color: #4338ca; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>Resultados PNCP - Módulo 07</h2>
-    <button onclick="carregarPNCP()">Buscar Dados da API</button>
-    <span id="status"></span>
+<div class="container">
+    <h2>📡 Monitor de Contratações PNCP (Lei 14.133)</h2>
+    
+    <div class="controls">
+        <button onclick="buscarDadosDoGoverno()">Atualizar Dados 2025</button>
+        <div id="status">Pronto para consultar</div>
+    </div>
 
-    <table id="tabelaDados">
+    <table>
         <thead>
             <tr>
                 <th>Descrição do Item</th>
-                <th>Fornecedor (CNPJ)</th>
-                <th>Qtd</th>
+                <th>Vencedor (CNPJ)</th>
+                <th>Quantidade</th>
                 <th>Vlr Unitário</th>
+                <th>Total Homologado</th>
             </tr>
         </thead>
-        <tbody id="tabelaCorpo"></tbody>
+        <tbody id="corpoTabela">
+            <tr><td colspan="5" style="text-align: center; padding: 40px; color: #666;">Clique no botão acima para carregar as informações.</td></tr>
+        </tbody>
     </table>
 </div>
 
 <script>
-async function carregarPNCP() {
+async function buscarDadosDoGoverno() {
     const status = document.getElementById('status');
-    const corpo = document.getElementById('tabelaCorpo');
+    const corpo = document.getElementById('corpoTabela');
     
-    status.innerHTML = "⏳ Carregando...";
+    status.innerHTML = "⏳ Conectando à API do Governo (via Proxy)...";
     status.style.color = "orange";
-    corpo.innerHTML = '';
 
-    // Usando um Proxy para pular o erro de CORS
-    const proxy = "https://api.allorigins.win/get?url=";
-    const urlGoverno = encodeURIComponent('https://dadosabertos.compras.gov.br/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=10');
+    // URL com filtros de 2025 e paginação (Módulo 07 - Item 3)
+    const dataInicio = "20250101";
+    const dataFim = "20251231";
+    const urlOriginal = `https://dadosabertos.compras.gov.br/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=15&dataInicial=${dataInicio}&dataFinal=${dataFim}`;
+    
+    // Proxy para evitar erro de CORS
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(urlOriginal)}`;
 
     try {
-        const res = await fetch(proxy + urlGoverno);
-        const jsonWrapper = await res.json();
-        const data = JSON.parse(jsonWrapper.contents); // O proxy traz o dado dentro de 'contents'
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error("Falha na resposta do Proxy");
+        
+        const wrapper = await response.json();
+        const data = JSON.parse(wrapper.contents);
 
         if (data.resultado && data.resultado.length > 0) {
+            corpo.innerHTML = ""; // Limpa a tabela
             data.resultado.forEach(item => {
-                const cnpj = item.niFornecedorVencedor || "N/A";
-                const row = `
-                    <tr>
-                        <td>${item.descricaoItem || 'Sem descrição'}</td>
-                        <td><button class="btn-cnpj" onclick="consultarEmpresa('${cnpj}')">${cnpj}</button></td>
-                        <td>${item.quantidadeHomologada || 0}</td>
-                        <td>R$ ${item.valorUnitarioHomologado?.toLocaleString('pt-BR') || '0,00'}</td>
-                    </tr>`;
-                corpo.innerHTML += row;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><span class="badge">ITEM</span> ${item.descricaoItem ? item.descricaoItem.substring(0, 80) : 'Sem descrição'}...</td>
+                    <td><button class="cnpj-btn" onclick="consultarFornecedor('${item.niFornecedorVencedor}')">${item.niFornecedorVencedor || 'N/A'}</button></td>
+                    <td>${item.quantidadeHomologada || 0}</td>
+                    <td>R$ ${item.valorUnitarioHomologado?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}</td>
+                    <td><strong>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}</strong></td>
+                `;
+                corpo.appendChild(row);
             });
-            status.innerHTML = "✅ Dados carregados!";
+            status.innerHTML = "✅ Dados de 2025 carregados!";
             status.style.color = "green";
         } else {
-            status.innerHTML = "❌ Nenhum dado encontrado.";
+            status.innerHTML = "⚠️ Nenhum dado encontrado para o período de 2025.";
+            status.style.color = "#856404";
         }
-    } catch (e) {
-        status.innerHTML = "❌ Erro ao acessar API.";
-        console.error(e);
+    } catch (error) {
+        console.error("Erro na consulta:", error);
+        status.innerHTML = "❌ Erro ao acessar a API. Tente novamente.";
+        status.style.color = "red";
     }
 }
 
-async function consultarEmpresa(cnpj) {
+async function consultarFornecedor(cnpj) {
+    if (!cnpj || cnpj === 'N/A') return alert("CNPJ não disponível.");
     const cnpjLimpo = cnpj.replace(/\D/g, '');
+    
     try {
         const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
-        const data = await res.json();
-        alert(`Empresa: ${data.razao_social}\nSituação: ${data.descricao_situacao_cadastral}\nCidade: ${data.municipio}/${data.uf}`);
+        const info = await res.json();
+        
+        if (res.ok) {
+            alert(`🏢 EMPRESA: ${info.razao_social}\n📌 NOME FANTASIA: ${info.nome_fantasia || 'N/A'}\n📍 CIDADE: ${info.municipio}/${info.uf}\n✅ SITUAÇÃO: ${info.descricao_situacao_cadastral}`);
+        } else {
+            alert("Dados detalhados do CNPJ não encontrados na Receita.");
+        }
     } catch (e) {
-        alert("Erro ao buscar detalhes do CNPJ.");
+        alert("Erro ao conectar com a base de dados de CNPJ.");
     }
 }
 </script>
