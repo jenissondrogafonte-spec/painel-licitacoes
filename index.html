@@ -53,61 +53,23 @@
   </table>
 </div>
 
-<script>
-async function executarBusca() {
-    const d1 = document.getElementById('dataIni').value;
-    const d2 = document.getElementById('dataFim').value;
-    const orgao = document.getElementById('codOrgao').value.trim();
-    const cnpjFiltro = document.getElementById('cnpj').value.replace(/\D/g, "");
-    
-    const status = document.getElementById('msgStatus');
-    const corpo = document.getElementById('tabelaCorpo');
+// Dentro da função executarBusca, após o JSON.parse:
 
-    status.innerHTML = "⏳ Conectando à API do Governo Federal...";
-    status.style.background = "#fff3cd";
-    status.style.color = "#856404";
+lista.forEach(item => {
+    // Verificamos os nomes exatos das colunas que vieram no seu JSON
+    const cnpj = item.niFornecedor || "N/A";
+    const nome = item.nomeRazaoSocialFornecedor || "";
+    const descricao = item.descricaoItem || "Sem descrição";
+    const total = item.valorTotalHomologado ? item.valorTotalHomologado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : "R$ 0,00";
 
-    // Endpoint 7 conforme Manual v1.0 Mar/25 pág. 97
-    let url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataPublicacaoPncpInicial=${d1}&dataPublicacaoPncpFinal=${d2}`;
-    
-    if (orgao) url += `&codigoOrgao=${orgao}`;
-
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-
-    try {
-        const response = await fetch(proxy);
-        const wrapper = await response.json();
-        const data = JSON.parse(wrapper.contents);
-        let lista = data.resultado || [];
-
-        // Filtro de CNPJ usando o campo 'niFornecedor' (conforme o JSON que você recebeu)
-        if (cnpjFiltro) {
-            lista = lista.filter(i => (i.niFornecedor || "").includes(cnpjFiltro));
-        }
-
-        if (lista.length === 0) {
-            corpo.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Nenhum dado encontrado para o período/órgão informado.</td></tr>";
-            status.innerHTML = "⚠️ Busca concluída: Sem resultados.";
-            status.style.background = "#fee2e2";
-        } else {
-            corpo.innerHTML = "";
-            lista.forEach(item => {
-                corpo.innerHTML += `
-                <tr>
-                    <td><strong>${item.idContratacaoPNCP || 'N/A'}</strong></td>
-                    <td>${item.niFornecedor || 'N/A'}<br><small>${item.nomeRazaoSocialFornecedor || ''}</small></td>
-                    <td>${item.descricaoItem || 'Sem descrição'}</td>
-                    <td>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR') || '0,00'}</td>
-                </tr>`;
-            });
-            status.innerHTML = `✅ Sucesso: ${lista.length} registros encontrados!`;
-            status.style.background = "#dcfce7";
-            status.style.color = "#166534";
-        }
-    } catch (e) {
-        status.innerHTML = "❌ Erro ao conectar ou processar dados.";
-        status.style.background = "#fee2e2";
-        status.style.color = "#991b1b";
+    corpo.innerHTML += `
+    <tr>
+        <td><strong>${item.idContratacaoPNCP || 'N/A'}</strong></td>
+        <td>${cnpj}<br><small>${nome}</small></td>
+        <td>${descricao}</td>
+        <td>${total}</td>
+    </tr>`;
+});
     }
 }
 </script>
