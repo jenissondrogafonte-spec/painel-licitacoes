@@ -1,85 +1,44 @@
 <script>
-const BASE_URL = 'https://dadosabertos.compras.gov.br';
+document.addEventListener('DOMContentLoaded', async () => {
+  const status = document.getElementById('status') || document.createElement('div');
+  status.id = 'status';
+  status.style.color = 'blue';
+  status.style.fontWeight = 'bold';
+  document.body.appendChild(status);
 
-document.addEventListener('DOMContentLoaded', () => {
-  const dataIniEl = document.getElementById('dataIni');
-  const dataFimEl = document.getElementById('dataFim');
-  const statusEl = document.getElementById('status2');   // use um id próprio para o quadro de Resultado
-  const tbody = document.getElementById('tbody2');       // tbody da tabela de Resultado
-
-  if (!dataIniEl || !dataFimEl || !statusEl || !tbody) {
-    console.error('Verifique os IDs: dataIni, dataFim, status2, tbody2.');
-    return;
-  }
-
-  async function buscar(pagina = 1) {
-    const dataIni = dataIniEl.value;
-    const dataFim = dataFimEl.value;
-
-    statusEl.classList.remove('error');
-    statusEl.textContent = 'Consultando RESULTADO dos itens no PNCP...';
-    tbody.innerHTML = '';
-
-    try {
-      const params = new URLSearchParams();
-      params.append('pagina', pagina);
-      params.append('tamanhoPagina', 10);
-      if (dataIni) params.append('dataResultadoInicial', dataIni);
-      if (dataFim) params.append('dataResultadoFinal', dataFim);
-
-      // módulo 07 – Resultado dos Itens das Contratações PNCP 14.133 [file:2]
-      const url = `${BASE_URL}/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?` + params.toString();
-
-      const resp = await fetch(url);
-      if (!resp.ok) throw new Error('Erro HTTP ' + resp.status);
-
-      const data = await resp.json();
-      const resultados = data.resultado || [];
-
-      if (!Array.isArray(resultados) || resultados.length === 0) {
-        statusEl.textContent = 'Nenhum resultado de item encontrado para os filtros informados.';
-        return;
-      }
-
-      resultados.forEach(item => {
+  try {
+    status.textContent = '🔄 Testando conexão com Compras.gov.br (módulo 07)...';
+    
+    // Chama SEM FILTROS – só paginação (deve retornar dados sempre) [web:13]
+    const url = 'https://dadosabertos.compras.gov.br/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?pagina=1&tamanhoPagina=5';
+    
+    const resp = await fetch(url);
+    status.textContent = '✅ Fetch OK. Status: ' + resp.status;
+    
+    const data = await resp.json();
+    status.textContent += ' | Registros: ' + (data.resultado?.length || 0);
+    
+    // Mostra o JSON cru no console (F12)
+    console.log('JSON completo:', data);
+    
+    // Se você tem tbody, popula com dados básicos
+    const tbody = document.getElementById('tbody');
+    if (tbody && data.resultado) {
+      data.resultado.forEach((item, i) => {
         const tr = document.createElement('tr');
-
-        // Órgão (código)
-        const tdOrgao = document.createElement('td');
-        tdOrgao.textContent = item.orgaoEntidadeCnpj || item.unidadeOrgaoCodigoUnidade || '';
-        tr.appendChild(tdOrgao);
-
-        // Fornecedor (CNPJ)
-        const tdFornecedor = document.createElement('td');
-        tdFornecedor.textContent = item.niFornecedor || '';
-        tr.appendChild(tdFornecedor);
-
-        // Descrição do item (não vem nesse endpoint; placeholder)
-        const tdDescricao = document.createElement('td');
-        tdDescricao.textContent = `Item PNCP nº ${item.numeroItemPncp || ''}`;
-        tr.appendChild(tdDescricao);
-
-        // Valor total homologado
-        const tdValorTotal = document.createElement('td');
-        tdValorTotal.textContent = item.valorTotalHomologado != null
-          ? item.valorTotalHomologado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-          : '';
-        tr.appendChild(tdValorTotal);
-
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td>${JSON.stringify(item).substring(0, 100)}...</td>
+        `;
         tbody.appendChild(tr);
       });
-
-      statusEl.textContent = `Exibindo ${resultados.length} registros.`;
-
-    } catch (e) {
-      console.error(e);
-      statusEl.textContent = 'Erro ao consultar a API (resultado de itens): ' + e.message;
-      statusEl.classList.add('error');
+      status.textContent += ' | Tabela populada com preview.';
     }
+    
+  } catch (e) {
+    status.textContent = '❌ Erro: ' + e.message;
+    status.style.color = 'red';
+    console.error(e);
   }
-
-  // expõe a função para o botão do segundo painel
-  window.buscarResultado = buscar;
-  buscar();
 });
 </script>
