@@ -2,50 +2,59 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel PNCP - Filtros Especializados</title>
+    <title>Painel Inteligente PNCP</title>
     <style>
-        :root { --primary: #003366; --bg: #f4f7f6; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1300px; margin: auto; }
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; background: #eef2f7; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 11px; font-weight: bold; color: #444; }
-        input, select, button { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; }
-        button { background: var(--primary); color: white; font-weight: bold; cursor: pointer; border: none; }
-        button:hover { background: #0055aa; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        :root { --primary: #003366; --accent: #0055aa; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 1300px; margin: auto; }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; background: #f1f5f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        .group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 11px; font-weight: bold; color: #475569; text-transform: uppercase; }
+        input, button { padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; }
+        button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: var(--accent); opacity: 0.9; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; }
         th { background: var(--primary); color: white; padding: 12px; text-align: left; font-size: 12px; }
-        td { padding: 10px; border-bottom: 1px solid #eee; font-size: 12px; }
-        .badge { background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px; color: #1e293b; }
+        tr:hover { background: #f8fafc; }
+        .loader { display: none; color: #1e40af; font-weight: bold; padding: 10px; background: #dbeafe; border-radius: 6px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>🔍 Consulta Detalhada PNCP - Módulo 07</h2>
+    <h2>🔍 Consulta PNCP - Módulo 07 Completo</h2>
     
+    <div id="loader" class="loader">⏳ Processando dados do Governo... Por favor, aguarde.</div>
+
     <div class="filter-grid">
-        <div class="group">
-            <label>Data Início:</label>
-            <input type="date" id="d1" value="2024-01-01">
-        </div>
-        <div class="group">
-            <label>Data Fim:</label>
-            <input type="date" id="d2" value="2024-12-31">
-        </div>
-        <div class="group">
-            <label>Código Órgão:</label>
-            <input type="text" id="codOrgao" placeholder="Ex: 925001">
-        </div>
-        <div class="group">
-            <label>ID Compra:</label>
-            <input type="text" id="idCompra" placeholder="Ex: 123/2024">
-        </div>
-        <div class="group">
-            <label>CNPJ Fornecedor:</label>
-            <input type="text" id="cnpj" placeholder="Só números">
-        </div>
-        <button onclick="consultarAvancado()">Pesquisar</button>
+        <div class="group"><label>Início:</label><input type="date" id="d1" value="2024-01-01"></div>
+        <div class="group"><label>Fim:</label><input type="date" id="d2" value="2024-12-31"></div>
+        <div class="group"><label>Cód. Órgão:</label><input type="text" id="codOrgao" placeholder="Ex: 926150"></div>
+        <div class="group"><label>ID Compra:</label><input type="text" id="idCompra" placeholder="Ex: 123/2024"></div>
+        <div class="group"><label>CNPJ Fornecedor:</label><input type="text" id="cnpj" placeholder="Só números"></div>
+        <button id="btn" onclick="executarBusca()">Pesquisar Agora</button>
     </div>
 
-    <div id="status" style="font-weight:bold;
+    <table id="tabela">
+        <thead>
+            <tr>
+                <th>Órgão / ID Compra</th>
+                <th>Descrição do Item</th>
+                <th>Vencedor (CNPJ)</th>
+                <th>Qtd</th>
+                <th>Total Homologado</th>
+            </tr>
+        </thead>
+        <tbody id="corpo">
+            <tr><td colspan="5" style="text-align:center; padding: 40px; color: #64748b;">Nenhum dado carregado.</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+async function executarBusca() {
+    const btn = document.getElementById('btn');
+    const loader = document.getElementById('loader');
+    const corpo = document.getElementById('corpo');
