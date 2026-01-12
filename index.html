@@ -2,141 +2,94 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel PNCP - Módulo 07</title>
+    <title>Painel PNCP - Consulta Histórica</title>
     <style>
         :root { --primary: #003366; --bg: #f4f7f6; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; margin: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1250px; margin: auto; }
-        h2 { color: var(--primary); margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #eef2f7; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #d1d9e0; }
-        .group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 12px; font-weight: bold; color: #444; }
-        select, input, button { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
-        .btn-main { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; height: 42px; align-self: flex-end; }
-        .btn-main:hover { background: #0055aa; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; }
-        th { background: var(--primary); color: white; padding: 12px; text-align: left; font-size: 13px; }
-        td { padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; color: #333; }
-        tr:nth-child(even) { background-color: #fcfcfc; }
-        tr:hover { background: #f1f5f9; }
-        .status-msg { font-weight: bold; padding: 10px 0; display: block; border-radius: 4px; }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #eef2f7; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        input, button, select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; }
+        button { background: var(--primary); color: white; font-weight: bold; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background: var(--primary); color: white; padding: 12px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .aviso { color: #856404; background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-size: 14px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📋 Painel de Contratações (Lei 14.133)</h2>
+    <h2>📊 Consulta Histórica PNCP (2023 - 2026)</h2>
+    <div id="alerta" class="aviso">⚠️ Períodos longos podem demorar ou falhar. Tente buscar um ano de cada vez se der erro.</div>
     
     <div class="filter-grid">
-        <div class="group">
-            <label>Tipo de Consulta:</label>
-            <select id="servicoApi">
-                <option value="resultado_itens">3 - Resultado de Itens (Vencedores)</option>
-                <option value="lista_contratos">1 - Lista de Contratações (Editais)</option>
-            </select>
+        <div style="display:flex; flex-direction:column;">
+            <label>Início:</label>
+            <input type="date" id="dataIni" value="2023-01-01">
         </div>
-        <div class="group">
-            <label>Data Inicial:</label>
-            <input type="date" id="dataIni" value="2024-01-01">
+        <div style="display:flex; flex-direction:column;">
+            <label>Fim:</label>
+            <input type="date" id="dataFim" value="2026-12-31">
         </div>
-        <div class="group">
-            <label>Data Final:</label>
-            <input type="date" id="dataFim" value="2024-12-31">
-        </div>
-        <div class="group">
-            <label>CNPJ Vencedor (Opcional):</label>
-            <input type="text" id="cnpjBusca" placeholder="Apenas números">
-        </div>
-        <button class="btn-main" onclick="consultarPNCP()">Consultar PNCP</button>
+        <button onclick="consultarHistorico()">Consultar Dados</button>
     </div>
 
-    <span id="status" class="status-msg"></span>
-
-    <table id="tabelaResultado">
-        <thead id="headTabela"></thead>
-        <tbody id="bodyTabela">
-            <tr><td colspan="5" style="text-align:center; padding: 40px; color: #999;">Configure os filtros e clique no botão azul.</td></tr>
-        </tbody>
+    <div id="status"></div>
+    <table>
+        <thead>
+            <tr>
+                <th>Descrição</th>
+                <th>Vencedor (CNPJ)</th>
+                <th>Quantidade</th>
+                <th>Total Homologado</th>
+            </tr>
+        </thead>
+        <tbody id="corpo"></tbody>
     </table>
 </div>
 
 <script>
-async function consultarPNCP() {
-    const servico = document.getElementById('servicoApi').value;
-    const dIni = document.getElementById('dataIni').value.replace(/-/g, "");
-    const dFim = document.getElementById('dataFim').value.replace(/-/g, "");
-    const cnpj = document.getElementById('cnpjBusca').value.replace(/\D/g, "");
-    
+async function consultarHistorico() {
+    const d1 = document.getElementById('dataIni').value.replace(/-/g, "");
+    const d2 = document.getElementById('dataFim').value.replace(/-/g, "");
     const status = document.getElementById('status');
-    const head = document.getElementById('headTabela');
-    const body = document.getElementById('bodyTabela');
+    const corpo = document.getElementById('corpo');
 
-    status.innerHTML = "⏳ Conectando ao Portal Nacional de Contratações Públicas...";
-    status.style.color = "#856404";
-    body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Carregando dados...</td></tr>';
-
-    let endpoint = "";
-    if (servico === "resultado_itens") {
-        endpoint = `https://dadosabertos.compras.gov.br/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=50&dataInicial=${dIni}&dataFinal=${dFim}`;
-    } else {
-        endpoint = `https://dadosabertos.compras.gov.br/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?pagina=1&tamanhoPagina=50&dataInicial=${dIni}&dataFinal=${dFim}`;
+    // Alerta de período longo
+    if (parseInt(d2) - parseInt(d1) > 10000) { 
+        document.getElementById('alerta').style.display = "block";
     }
 
-    // Trocando para um servidor de Proxy mais robusto (CorsProxy.io)
-    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(endpoint)}`;
+    status.innerHTML = "⏳ Processando grande volume de dados... aguarde.";
+    corpo.innerHTML = "";
+
+    const url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataInicial=${d1}&dataFinal=${d2}`;
+    
+    // Usando um proxy diferente para suportar mais dados
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
 
     try {
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error("Erro na rede ou Proxy fora do ar.");
-        
-        const data = await response.json();
-        let lista = data.resultado || [];
+        const response = await fetch(proxy);
+        const resJson = await response.json();
+        const data = JSON.parse(resJson.contents);
 
-        if (cnpj) {
-            lista = lista.filter(i => (i.niFornecedorVencedor || i.cnpjUnidadeOrgao || "").includes(cnpj));
-        }
-
-        if (lista.length === 0) {
-            body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">❌ Nenhum dado encontrado para este período ou CNPJ.</td></tr>';
-            status.innerHTML = "⚠️ A consulta não retornou registros.";
-            status.style.color = "orange";
-            return;
-        }
-
-        body.innerHTML = "";
-        if (servico === "resultado_itens") {
-            head.innerHTML = `<tr><th>Descrição do Item</th><th>Vencedor (CNPJ)</th><th>Qtd</th><th>Unitário</th><th>Total</th></tr>`;
-            lista.forEach(item => {
-                body.innerHTML += `<tr>
+        if (data.resultado && data.resultado.length > 0) {
+            data.resultado.forEach(item => {
+                corpo.innerHTML += `<tr>
                     <td>${item.descricaoItem || 'N/A'}</td>
                     <td>${item.niFornecedorVencedor || 'N/A'}</td>
-                    <td>${item.quantidadeHomologada || 0}</td>
-                    <td>R$ ${item.valorUnitarioHomologado?.toLocaleString('pt-BR') || '0,00'}</td>
-                    <td><strong>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR') || '0,00'}</strong></td>
+                    <td>${item.quantidadeHomologada}</td>
+                    <td>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR')}</td>
                 </tr>`;
             });
+            status.innerHTML = "✅ Dados carregados!";
         } else {
-            head.innerHTML = `<tr><th>Órgão</th><th>Objeto da Compra</th><th>Data</th><th>Valor Estimado</th></tr>`;
-            lista.forEach(item => {
-                body.innerHTML += `<tr>
-                    <td>${item.nomeOrgao || 'N/A'}</td>
-                    <td>${item.objetoContratacao?.substring(0, 120) || 'N/A'}...</td>
-                    <td>${item.dataPublicacaoPncp ? new Date(item.dataPublicacaoPncp).toLocaleDateString('pt-BR') : 'N/A'}</td>
-                    <td>R$ ${item.valorTotalEstimado?.toLocaleString('pt-BR') || '0,00'}</td>
-                </tr>`;
-            });
+            status.innerHTML = "❌ Nenhum dado para este período específico.";
         }
-        status.innerHTML = `✅ Sucesso! ${lista.length} registros encontrados.`;
-        status.style.color = "green";
     } catch (e) {
-        status.innerHTML = `❌ Erro: Não foi possível obter dados do Governo. Tente novamente em instantes.`;
-        status.style.color = "red";
-        body.innerHTML = '<tr><td colspan="5" style="text-align:center; color: red;">Erro de conexão com a API.</td></tr>';
-        console.error(e);
+        status.innerHTML = "❌ O servidor do Governo demorou a responder. Tente um período menor (ex: apenas 6 meses).";
     }
 }
 </script>
-
 </body>
 </html>
