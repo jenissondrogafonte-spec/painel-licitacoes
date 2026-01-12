@@ -6,21 +6,43 @@ document.addEventListener('DOMContentLoaded', async () => {
   status.style.fontWeight = 'bold';
   document.body.appendChild(status);
 
+  // CSV direto do portal de dados (equivalente ao módulo 07 – Contratações PNCP) [file:1]
+  const csvUrl = 'https://dados.gov.br/dados/conjuntos-dados/compras-publicas-do-governo-federal/resources/comprasGOV-anual-VWFTPNCPCOMPRA-latest.csv';
+  
   try {
-    status.textContent = '🔄 Testando UASG (funciona 100%)...';
+    status.textContent = '🔄 Carregando CSV de Contratações PNCP (anual)...';
     
-    // Endpoint UASG que SEMPRE retorna dados [file:2][web:13]
-    const url = 'https://dadosabertos.compras.gov.br/modulo-uasg/1_consultarUasg?pagina=1&tamanhoPagina=5';
+    const resp = await fetch(csvUrl);
+    if (!resp.ok) throw new Error('CSV não encontrado');
     
-    const resp = await fetch(url);
-    const data = await resp.json();
+    const csvText = await resp.text();
+    const linhas = csvText.split('\n').slice(1, 11); // primeiras 10 linhas
     
-    status.textContent = `✅ UASG OK! Status: ${resp.status} | Registros: ${data.resultado?.length || 0}`;
+    status.textContent = `✅ CSV carregado! ${linhas.length} registros preview.`;
+
+    const tbody = document.getElementById('tbody');
+    if (tbody) {
+      linhas.forEach(linha => {
+        const cols = linha.split(',');
+        if (cols.length >= 6) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${cols[0]}</td> <!-- ID -->
+            <td>${cols[1]}</td> <!-- Órgão -->
+            <td>${cols[2]}</td> <!-- UASG -->
+            <td>${cols[3]}</td> <!-- Data -->
+            <td>${cols[4]}</td> <!-- Valor Estimado -->
+            <td>${cols[5]}</td> <!-- Valor Homologado -->
+          `;
+          tbody.appendChild(tr);
+        }
+      });
+    }
     
-    console.log('UASG dados:', data);
+    console.log('CSV preview:', linhas.slice(0,3));
     
   } catch (e) {
-    status.textContent = '❌ Erro UASG: ' + e.message;
+    status.textContent = '❌ Erro CSV: ' + e.message;
     status.style.color = 'red';
   }
 });
