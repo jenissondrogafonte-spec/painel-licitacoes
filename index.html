@@ -2,108 +2,63 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel Oficial PNCP - v1.0 Mar/25</title>
+    <title>Teste Real PNCP - Manual 2025</title>
     <style>
-        :root { --gov-blue: #003366; --bg: #f8fafc; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; margin: 0; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); max-width: 1200px; margin: auto; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #f1f5f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        label { font-size: 11px; font-weight: bold; color: #64748b; margin-bottom: 5px; display: block; }
-        input, button { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; }
-        button { background: var(--gov-blue); color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #004488; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; }
-        th { background: var(--gov-blue); color: white; padding: 12px; text-align: left; font-size: 12px; }
-        td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #1e293b; }
-        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 15px; }
+        body { font-family: sans-serif; padding: 20px; background: #f4f7f6; }
+        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 800px; margin: auto; }
+        input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { background: #003366; color: white; border: none; font-weight: bold; cursor: pointer; }
+        #log { margin-top: 20px; font-size: 12px; color: #666; background: #eee; padding: 10px; border-radius: 4px; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>📋 Consulta PNCP (Manual Março/2025)</h2>
-    <div id="status" class="status-badge" style="background:#e2e8f0;">Aguardando filtros...</div>
+<div class="box">
+    <h3>🔍 Teste de Conexão PNCP (Padrão Mar/25)</h3>
+    <p style="font-size: 12px; color: red;">Nota: Use um intervalo de apenas 7 dias para o primeiro teste.</p>
+    
+    <label>Início (AAAA-MM-DD):</label>
+    <input type="date" id="d1" value="2025-01-01">
+    
+    <label>Fim (AAAA-MM-DD):</label>
+    <input type="date" id="d2" value="2025-01-07">
 
-    <div class="grid">
-        <div><label>Data Publicação (Início):</label><input type="date" id="d1" value="2025-01-01"></div>
-        <div><label>Data Publicação (Fim):</label><input type="date" id="d2" value="2025-01-31"></div>
-        <div><label>Cód. Órgão (Manual p.97):</label><input type="text" id="orgao" placeholder="Ex: 926150"></div>
-        <div><label>CNPJ Vencedor:</label><input type="text" id="cnpj" placeholder="Apenas números"></div>
-        <div style="display:flex; align-items:flex-end;"><button onclick="consultarPNCP()">Pesquisar</button></div>
-    </div>
+    <button onclick="testarAPI()">Testar Agora</button>
 
-    <table>
-        <thead>
-            <tr>
-                <th>ID Contratação (PNCP)</th>
-                <th>Fornecedor (CNPJ)</th>
-                <th>Item / Descrição</th>
-                <th>Total Homologado</th>
-            </tr>
-        </thead>
-        <tbody id="corpoTabela">
-            <tr><td colspan="4" style="text-align:center; padding:40px; color:#94a3b8;">Defina o período (máx. 30 dias) e clique em pesquisar.</td></tr>
-        </tbody>
-    </table>
+    <div id="status"></div>
+    <div id="log">Logs de conexão aparecerão aqui...</div>
 </div>
 
 <script>
-async function consultarPNCP() {
+async function testarAPI() {
     const d1 = document.getElementById('d1').value;
     const d2 = document.getElementById('d2').value;
-    const orgao = document.getElementById('orgao').value.trim();
-    const cnpj = document.getElementById('cnpj').value.replace(/\D/g, "");
-    
+    const log = document.getElementById('log');
     const status = document.getElementById('status');
-    const corpo = document.getElementById('corpoTabela');
 
-    status.innerHTML = "⏳ Consultando API Compras.gov.br...";
-    status.style.background = "#fef3c7";
-    status.style.color = "#92400e";
-
-    // Endpoint 10.7 do Manual de API (Resultado de Itens)
-    let url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataPublicacaoPncpInicial=${d1}&dataPublicacaoPncpFinal=${d2}`;
+    status.innerHTML = "⏳ Tentando conexão...";
     
-    if (orgao) url += `&codigoOrgao=${orgao}`;
-
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    // URL EXATA conforme Manual pág. 97 (Endpoint 10.7)
+    const urlGov = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=10&dataPublicacaoPncpInicial=${d1}&dataPublicacaoPncpFinal=${d2}`;
+    
+    log.innerHTML = "Chamando: " + urlGov;
 
     try {
-        const response = await fetch(proxy);
-        const json = await response.json();
-        const data = JSON.parse(json.contents);
-        let lista = data.resultado || [];
+        // Usando o proxy AllOrigins para contornar o CORS
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(urlGov)}`);
+        const resJson = await response.json();
+        const data = JSON.parse(resJson.contents);
 
-        // Filtro local de CNPJ (campo niFornecedor conforme manual p.101)
-        if (cnpj) {
-            lista = lista.filter(i => (i.niFornecedor || "").includes(cnpj));
+        if (data.resultado && data.resultado.length > 0) {
+            status.innerHTML = "✅ SUCESSO! Encontrados " + data.resultado.length + " itens.";
+            status.style.color = "green";
+        } else {
+            status.innerHTML = "⚠️ API respondeu, mas a lista veio VAZIA. Tente outro período de 2024.";
+            status.style.color = "orange";
         }
-
-        if (lista.length === 0) {
-            corpo.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum resultado. Tente reduzir o período para 15 dias conforme pág. 2 do Manual de Acesso.</td></tr>';
-            status.innerHTML = "⚠️ Sem registros encontrados";
-            status.style.background = "#fee2e2";
-            status.style.color = "#991b1b";
-            return;
-        }
-
-        corpo.innerHTML = "";
-        lista.forEach(item => {
-            corpo.innerHTML += `<tr>
-                <td><strong>${item.idContratacaoPNCP || 'N/A'}</strong></td>
-                <td>${item.niFornecedor || 'N/A'}<br><small>${item.nomeRazaoSocialFornecedor || ''}</small></td>
-                <td>${item.descricaoItem || 'Sem descrição'}</td>
-                <td>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR') || '0,00'}</td>
-            </tr>`;
-        });
-
-        status.innerHTML = `✅ ${lista.length} registros carregados.`;
-        status.style.background = "#dcfce7";
-        status.style.color = "#166534";
-
     } catch (e) {
-        status.innerHTML = "❌ Erro de conexão com o Governo";
-        status.style.background = "#fee2e2";
+        status.innerHTML = "❌ ERRO: O servidor do governo bloqueou a requisição.";
+        status.style.color = "red";
     }
 }
 </script>
