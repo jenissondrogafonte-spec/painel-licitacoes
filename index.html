@@ -2,86 +2,108 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel PNCP - Modo Estabilidade</title>
+    <title>Painel Oficial PNCP - v1.0 Mar/25</title>
     <style>
-        :root { --blue: #003366; }
-        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-        input, button { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { background: var(--blue); color: white; cursor: pointer; border: none; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th { background: var(--blue); color: white; padding: 10px; font-size: 12px; }
-        td { padding: 8px; border-bottom: 1px solid #eee; font-size: 11px; }
-        .warning { color: #856404; background: #fff3cd; padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 13px; }
+        :root { --gov-blue: #003366; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; margin: 0; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); max-width: 1200px; margin: auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #f1f5f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        label { font-size: 11px; font-weight: bold; color: #64748b; margin-bottom: 5px; display: block; }
+        input, button { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; box-sizing: border-box; }
+        button { background: var(--gov-blue); color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #004488; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; }
+        th { background: var(--gov-blue); color: white; padding: 12px; text-align: left; font-size: 12px; }
+        td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #1e293b; }
+        .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📡 Monitor de Contratações (Padrão Mar/25)</h2>
-    <div class="warning">⚠️ <strong>Dica do Manual:</strong> Para evitar o erro "Vazio", use um intervalo de no máximo 15 dias.</div>
+    <h2>📋 Consulta PNCP (Manual Março/2025)</h2>
+    <div id="status" class="status-badge" style="background:#e2e8f0;">Aguardando filtros...</div>
 
-    <div class="controls">
-        <input type="date" id="dataIni" value="2025-01-01">
-        <input type="date" id="dataFim" value="2025-01-15">
-        <input type="text" id="orgao" placeholder="Cód. Órgão (Só números)">
-        <button onclick="pesquisaEstrita()">Consultar Agora</button>
+    <div class="grid">
+        <div><label>Data Publicação (Início):</label><input type="date" id="d1" value="2025-01-01"></div>
+        <div><label>Data Publicação (Fim):</label><input type="date" id="d2" value="2025-01-31"></div>
+        <div><label>Cód. Órgão (Manual p.97):</label><input type="text" id="orgao" placeholder="Ex: 926150"></div>
+        <div><label>CNPJ Vencedor:</label><input type="text" id="cnpj" placeholder="Apenas números"></div>
+        <div style="display:flex; align-items:flex-end;"><button onclick="consultarPNCP()">Pesquisar</button></div>
     </div>
 
-    <div id="status"></div>
     <table>
         <thead>
             <tr>
-                <th>Data Pncp</th>
-                <th>Órgão</th>
-                <th>Objeto</th>
-                <th>Valor Estimado</th>
+                <th>ID Contratação (PNCP)</th>
+                <th>Fornecedor (CNPJ)</th>
+                <th>Item / Descrição</th>
+                <th>Total Homologado</th>
             </tr>
         </thead>
-        <tbody id="corpoTabela"></tbody>
+        <tbody id="corpoTabela">
+            <tr><td colspan="4" style="text-align:center; padding:40px; color:#94a3b8;">Defina o período (máx. 30 dias) e clique em pesquisar.</td></tr>
+        </tbody>
     </table>
 </div>
 
 <script>
-async function pesquisaEstrita() {
-    const d1 = document.getElementById('dataIni').value;
-    const d2 = document.getElementById('dataFim').value;
-    const orgao = document.getElementById('orgao').value;
-    const corpo = document.getElementById('corpoTabela');
+async function consultarPNCP() {
+    const d1 = document.getElementById('d1').value;
+    const d2 = document.getElementById('d2').value;
+    const orgao = document.getElementById('orgao').value.trim();
+    const cnpj = document.getElementById('cnpj').value.replace(/\D/g, "");
+    
     const status = document.getElementById('status');
+    const corpo = document.getElementById('corpoTabela');
 
-    status.innerHTML = "⏳ Conectando à base de dados (Manual pág. 97)...";
-    corpo.innerHTML = "";
+    status.innerHTML = "⏳ Consultando API Compras.gov.br...";
+    status.style.background = "#fef3c7";
+    status.style.color = "#92400e";
 
-    // MUDANÇA: Usando o serviço de CONTRATAÇÕES (1) que é mais estável que o de RESULTADOS (7)
-    let url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?pagina=1&tamanhoPagina=50&dataPublicacaoPncpInicial=${d1}&dataPublicacaoPncpFinal=${d2}`;
+    // Endpoint 10.7 do Manual de API (Resultado de Itens)
+    let url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataPublicacaoPncpInicial=${d1}&dataPublicacaoPncpFinal=${d2}`;
     
     if (orgao) url += `&codigoOrgao=${orgao}`;
 
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+
     try {
-        const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
         const response = await fetch(proxy);
         const json = await response.json();
         const data = JSON.parse(json.contents);
-        const lista = data.resultado || [];
+        let lista = data.resultado || [];
+
+        // Filtro local de CNPJ (campo niFornecedor conforme manual p.101)
+        if (cnpj) {
+            lista = lista.filter(i => (i.niFornecedor || "").includes(cnpj));
+        }
 
         if (lista.length === 0) {
-            status.innerHTML = "❌ Nenhum dado. Tente: 1. Reduzir o período para 7 dias; 2. Verificar se o Código do Órgão está correto.";
+            corpo.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum resultado. Tente reduzir o período para 15 dias conforme pág. 2 do Manual de Acesso.</td></tr>';
+            status.innerHTML = "⚠️ Sem registros encontrados";
+            status.style.background = "#fee2e2";
+            status.style.color = "#991b1b";
             return;
         }
 
+        corpo.innerHTML = "";
         lista.forEach(item => {
             corpo.innerHTML += `<tr>
-                <td>${item.dataPublicacaoPncp ? new Date(item.dataPublicacaoPncp).toLocaleDateString() : '-'}</td>
-                <td>${item.nomeOrgao || 'N/A'}</td>
-                <td>${(item.objetoContratacao || '').substring(0, 100)}...</td>
-                <td>R$ ${item.valorTotalEstimado?.toLocaleString('pt-BR') || '0,00'}</td>
+                <td><strong>${item.idContratacaoPNCP || 'N/A'}</strong></td>
+                <td>${item.niFornecedor || 'N/A'}<br><small>${item.nomeRazaoSocialFornecedor || ''}</small></td>
+                <td>${item.descricaoItem || 'Sem descrição'}</td>
+                <td>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR') || '0,00'}</td>
             </tr>`;
         });
-        status.innerHTML = `✅ ${lista.length} contratações encontradas.`;
+
+        status.innerHTML = `✅ ${lista.length} registros carregados.`;
+        status.style.background = "#dcfce7";
+        status.style.color = "#166534";
+
     } catch (e) {
-        status.innerHTML = "❌ Erro de Timeout. O servidor do Governo não respondeu.";
+        status.innerHTML = "❌ Erro de conexão com o Governo";
+        status.style.background = "#fee2e2";
     }
 }
 </script>
