@@ -3,65 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Inteligência - PNCP</title>
+    <title>Painel Avançado - PNCP</title>
     <style>
-        :root { --primary: #003366; --bg: #f4f7f6; }
+        :root { --primary: #003366; --accent: #0055aa; --bg: #f4f7f6; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
         h2 { color: var(--primary); margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .search-area { margin: 20px 0; display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
-        button { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        /* Estilo dos Filtros */
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; background: #eef2f7; padding: 15px; border-radius: 8px; }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 12px; font-weight: bold; color: #555; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        
+        .btn-search { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; grid-column: span 1; align-self: end; }
+        .btn-search:hover { background: var(--accent); }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: var(--primary); color: white; padding: 12px; text-align: left; }
-        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        th { background: var(--primary); color: white; padding: 12px; text-align: left; font-size: 13px; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; }
         tr:hover { background: #f9f9f9; }
-        .status { font-weight: bold; margin-bottom: 10px; display: block; }
+        .status { font-weight: bold; margin: 10px 0; display: block; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📡 Consulta PNCP - Lei 14.133 (Módulo 07)</h2>
+    <h2>🔍 Consulta Personalizada - PNCP</h2>
     
-    <div class="search-area">
-        <input type="text" id="termoBusca" placeholder="Ex: Caneta, Notebook, Limpeza...">
-        <button onclick="chamarGoverno()">Buscar Resultados</button>
+    <div class="filter-grid">
+        <div class="filter-group">
+            <label>Data Inicial:</label>
+            <input type="date" id="dataInicio" value="2025-01-01">
+        </div>
+        <div class="filter-group">
+            <label>Data Final:</label>
+            <input type="date" id="dataFim" value="2025-12-31">
+        </div>
+        <div class="filter-group">
+            <label>Filtrar por CNPJ (Vencedor):</label>
+            <input type="text" id="cnpjFiltro" placeholder="00.000.000/0000-00">
+        </div>
+        <button class="btn-search" onclick="consultarAPI()">Consultar Agora</button>
     </div>
 
-    <span id="msgStatus" class="status">Aguardando busca...</span>
+    <span id="msgStatus" class="status">Preencha os filtros e clique em consultar.</span>
 
     <table>
         <thead>
             <tr>
-                <th>Descrição do Item</th>
-                <th>Vencedor (CNPJ)</th>
+                <th>Item / Descrição</th>
+                <th>CNPJ Vencedor</th>
                 <th>Qtd</th>
                 <th>Vlr Unitário</th>
                 <th>Total</th>
             </tr>
         </thead>
         <tbody id="tabelaCorpo">
-            <tr><td colspan="5" style="text-align:center;">Os dados aparecerão aqui.</td></tr>
+            <tr><td colspan="5" style="text-align:center; padding: 30px; color: #999;">Aguardando parâmetros...</td></tr>
         </tbody>
     </table>
 </div>
 
 <script>
-async function chamarGoverno() {
+async function consultarAPI() {
     const status = document.getElementById('msgStatus');
     const corpo = document.getElementById('tabelaCorpo');
-    const termo = document.getElementById('termoBusca').value.toLowerCase();
+    
+    // Captura e formata as datas (de AAAA-MM-DD para AAAAMMDD)
+    const dInicio = document.getElementById('dataInicio').value.replace(/-/g, "");
+    const dFim = document.getElementById('dataFim').value.replace(/-/g, "");
+    const cnpjInformado = document.getElementById('cnpjFiltro').value.replace(/\D/g, "");
 
-    status.innerHTML = "⏳ Acessando API Compras.gov.br...";
+    status.innerHTML = "⏳ Buscando dados no Governo...";
     status.style.color = "orange";
 
-    // URL baseada na sua imagem do Swagger (Módulo 07 - Item 3)
-    // Usamos um período de 2024 a 2026 para garantir que existam dados consolidados
-    const urlAPI = "https://dadosabertos.compras.gov.br/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataInicial=20240101&dataFinal=20261231";
+    // Endpoint oficial do Módulo 07
+    const urlGov = `https://dadosabertos.compras.gov.br/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataInicial=${dInicio}&dataFinal=${dFim}`;
     
-    // Proxy para contornar o erro de CORS mostrado na sua imagem anterior
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(urlAPI)}`;
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(urlGov)}`;
 
     try {
         const response = await fetch(proxy);
@@ -69,39 +89,4 @@ async function chamarGoverno() {
         const data = JSON.parse(json.contents);
 
         if (data.resultado && data.resultado.length > 0) {
-            // Filtra os resultados pelo que você digitou
-            const filtrados = data.resultado.filter(i => 
-                (i.descricaoItem || "").toLowerCase().includes(termo)
-            );
-
-            if (filtrados.length === 0) {
-                corpo.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum item encontrado com este nome.</td></tr>';
-                status.innerHTML = "⚠️ Termo não encontrado.";
-                return;
-            }
-
-            corpo.innerHTML = "";
-            filtrados.forEach(item => {
-                corpo.innerHTML += `
-                    <tr>
-                        <td>${item.descricaoItem || 'N/A'}</td>
-                        <td>${item.niFornecedorVencedor || 'N/A'}</td>
-                        <td>${item.quantidadeHomologada}</td>
-                        <td>R$ ${item.valorUnitarioHomologado?.toLocaleString('pt-BR')}</td>
-                        <td><strong>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR')}</strong></td>
-                    </tr>`;
-            });
-            status.innerHTML = "✅ Dados carregados com sucesso!";
-            status.style.color = "green";
-        } else {
-            status.innerHTML = "⚠️ A API retornou uma lista vazia para estas datas.";
-        }
-    } catch (e) {
-        status.innerHTML = "❌ Erro ao conectar. Verifique o Proxy.";
-        status.style.color = "red";
-    }
-}
-</script>
-
-</body>
-</html>
+            let lista = data.resultado;
