@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Consulta PNCP + Fornecedor</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f0f2f5; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: #003366; margin-bottom: 20px; }
+        button { background: #003366; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0055aa; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #003366; color: white; }
+        tr:hover { background: #f9f9f9; }
+        .btn-cnpj { color: #0055aa; cursor: pointer; text-decoration: underline; font-weight: bold; background: none; border: none; }
+        #status { margin-left: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Resultados PNCP - Módulo 07</h2>
+    <button onclick="carregarPNCP()">Buscar Dados da API</button>
+    <span id="status"></span>
+
+    <table id="tabelaDados">
+        <thead>
+            <tr>
+                <th>Descrição do Item</th>
+                <th>Fornecedor (CNPJ)</th>
+                <th>Qtd</th>
+                <th>Vlr Unitário</th>
+            </tr>
+        </thead>
+        <tbody id="tabelaCorpo"></tbody>
+    </table>
+</div>
+
+<script>
+async function carregarPNCP() {
+    const status = document.getElementById('status');
+    const corpo = document.getElementById('tabelaCorpo');
+    
+    status.innerHTML = "⏳ Carregando...";
+    status.style.color = "orange";
+    corpo.innerHTML = '';
+
+    // Usando um Proxy para pular o erro de CORS
+    const proxy = "https://api.allorigins.win/get?url=";
+    const urlGoverno = encodeURIComponent('https://dadosabertos.compras.gov.br/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=10');
+
+    try {
+        const res = await fetch(proxy + urlGoverno);
+        const jsonWrapper = await res.json();
+        const data = JSON.parse(jsonWrapper.contents); // O proxy traz o dado dentro de 'contents'
+
+        if (data.resultado && data.resultado.length > 0) {
+            data.resultado.forEach(item => {
+                const cnpj = item.niFornecedorVencedor || "N/A";
+                const row = `
+                    <tr>
+                        <td>${item.descricaoItem || 'Sem descrição'}</td>
+                        <td><button class="btn-cnpj" onclick="consultarEmpresa('${cnpj}')">${cnpj}</button></td>
+                        <td>${item.quantidadeHomologada || 0}</td>
+                        <td>R$ ${item.valorUnitarioHomologado?.toLocaleString('pt-BR') || '0,00'}</td>
+                    </tr>`;
+                corpo.innerHTML += row;
+            });
+            status.innerHTML = "✅ Dados carregados!";
+            status.style.color = "green";
+        } else {
+            status.innerHTML = "❌ Nenhum dado encontrado.";
+        }
+    } catch (e) {
+        status.innerHTML = "❌ Erro ao acessar API.";
+        console.error(e);
+    }
+}
+
+async function consultarEmpresa(cnpj) {
+    const cnpjLimpo = cnpj.replace(/\D/g, '');
+    try {
+        const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
+        const data = await res.json();
+        alert(`Empresa: ${data.razao_social}\nSituação: ${data.descricao_situacao_cadastral}\nCidade: ${data.municipio}/${data.uf}`);
+    } catch (e) {
+        alert("Erro ao buscar detalhes do CNPJ.");
+    }
+}
+</script>
+
+</body>
+</html>
