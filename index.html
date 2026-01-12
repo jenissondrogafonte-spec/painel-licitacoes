@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <title>Painel PNCP Final - Manual Mar/25</title>
     <style>
-        :root { --blue: #003366; --gray: #f4f7f6; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--gray); padding: 20px; }
+        :root { --blue: #003366; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
         .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #eef2f7; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
         input, button { padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
         button { background: var(--blue); color: white; border: none; font-weight: bold; cursor: pointer; }
         button:disabled { background: #ccc; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
         th { background: var(--blue); color: white; padding: 12px; text-align: left; }
         td { padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; }
         .status { padding: 10px; margin-bottom: 15px; border-radius: 4px; font-weight: bold; display: none; }
@@ -20,14 +20,14 @@
 <body>
 
 <div class="card">
-    <h2>📊 Consulta PNCP - Módulo 10.7 (Manual v1.0)</h2>
+    <h2>📊 Consulta PNCP - Módulo 10.7 (Filtros Mar/25)</h2>
     <div id="status" class="status"></div>
 
     <div class="filters">
         <input type="date" id="dataIni" value="2025-01-01">
         <input type="date" id="dataFim" value="2025-01-10">
-        <input type="text" id="codOrgao" placeholder="Cód. Órgão (Opcional)">
-        <input type="text" id="cnpjFiltro" placeholder="CNPJ Vencedor">
+        <input type="text" id="codOrgao" placeholder="Cód. Órgão (Só números)">
+        <input type="text" id="cnpjFiltro" placeholder="Filtrar CNPJ Vencedor">
         <button id="btn" onclick="executar()">Consultar Agora</button>
     </div>
 
@@ -36,12 +36,12 @@
             <tr>
                 <th>ID Contratação</th>
                 <th>Vencedor (CNPJ)</th>
-                <th>Item / Descrição</th>
+                <th>Descrição do Item</th>
                 <th>Valor Total</th>
             </tr>
         </thead>
         <tbody id="tabelaCorpo">
-            <tr><td colspan="4" style="text-align:center; padding:30px;">Aguardando dados...</td></tr>
+            <tr><td colspan="4" style="text-align:center; padding:30px;">Aguardando critérios de busca...</td></tr>
         </tbody>
     </table>
 </div>
@@ -60,9 +60,9 @@ async function executar() {
     btn.disabled = true;
     status.style.display = "block";
     status.style.background = "#fff3cd"; status.style.color = "#856404";
-    status.innerHTML = "⏳ Conectando à API do Governo...";
+    status.innerHTML = "⏳ Conectando e lendo resposta do Governo...";
 
-    // Endpoint 7 - Resultado de Itens (Pág 97 do Manual)
+    // Endpoint 10.7 conforme Manual p. 97
     let urlGov = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataPublicacaoPncpInicial=${d1}&dataPublicacaoPncpFinal=${d2}`;
     if (orgao) urlGov += `&codigoOrgao=${orgao}`;
 
@@ -71,42 +71,43 @@ async function executar() {
         const response = await fetch(proxy);
         const wrapper = await response.json();
         
-        // TRATAMENTO DO CONTEÚDO (Ponto onde costuma travar)
-        let data;
-        try {
-            data = typeof wrapper.contents === 'string' ? JSON.parse(wrapper.contents) : wrapper.contents;
-        } catch (e) {
-            throw new Error("Erro ao processar o pacote de dados do Proxy.");
-        }
-
-        let lista = data.resultado || [];
-
-        // Filtro local de CNPJ (Campo 'niFornecedor' pág 101)
-        if (cnpjBusca) {
-            lista = lista.filter(i => (i.niFornecedor || "").includes(cnpjBusca));
-        }
+        // Converte o conteúdo para objeto real
+        const data = JSON.parse(wrapper.contents);
+        const lista = data.resultado || [];
 
         if (lista.length === 0) {
-            status.innerHTML = "⚠️ API conectada, mas nenhum item encontrado para este filtro.";
+            status.innerHTML = "⚠️ API respondeu, mas não há dados para este período/filtro.";
             status.style.background = "#fee2e2"; status.style.color = "#b91c1c";
-            corpo.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Sem registros.</td></tr>";
+            corpo.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Sem registros encontrados.</td></tr>";
         } else {
             corpo.innerHTML = "";
-            lista.forEach(item => {
-                const total = item.valorTotalHomologado ? item.valorTotalHomologado.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : "R$ 0,00";
+            
+            // Filtro de CNPJ adaptável
+            let filtrados = lista;
+            if (cnpjBusca) {
+                filtrados = lista.filter(i => (i.niFornecedor || i.niFornecedorVencedor || "").includes(cnpjBusca));
+            }
+
+            filtrados.forEach(item => {
+                // Mapeamento dinâmico baseado no seu JSON
+                const id = item.idContratacaoPNCP || item.idCompra || 'N/A';
+                const cnpj = item.niFornecedor || item.niFornecedorVencedor || 'N/A';
+                const razao = item.nomeRazaoSocialFornecedor || "";
+                const valor = item.valorTotalHomologado ? item.valorTotalHomologado.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : "R$ 0,00";
+
                 corpo.innerHTML += `
                 <tr>
-                    <td><strong>${item.idContratacaoPNCP || 'N/A'}</strong></td>
-                    <td>${item.niFornecedor || 'N/A'}<br><small>${item.nomeRazaoSocialFornecedor || ''}</small></td>
+                    <td><strong>${id}</strong></td>
+                    <td>${cnpj}<br><small>${razao}</small></td>
                     <td>${item.descricaoItem || 'Sem descrição'}</td>
-                    <td><strong>${total}</strong></td>
+                    <td><strong>${valor}</strong></td>
                 </tr>`;
             });
-            status.innerHTML = `✅ ${lista.length} itens carregados com sucesso!`;
+            status.innerHTML = `✅ Sucesso! ${filtrados.length} itens exibidos.`;
             status.style.background = "#dcfce7"; status.style.color = "#166534";
         }
     } catch (err) {
-        status.innerHTML = "❌ Erro: " + err.message;
+        status.innerHTML = "❌ Erro ao processar dados. Verifique a conexão.";
         status.style.background = "#fee2e2"; status.style.color = "#b91c1c";
     } finally {
         btn.disabled = false;
