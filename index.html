@@ -2,59 +2,106 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel Inteligente PNCP</title>
+    <title>Painel PNCP - Atualizado Mar/25</title>
     <style>
-        :root { --primary: #003366; --accent: #0055aa; --bg: #f8fafc; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 1300px; margin: auto; }
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; background: #f1f5f9; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
-        .group { display: flex; flex-direction: column; gap: 4px; }
-        label { font-size: 11px; font-weight: bold; color: #475569; text-transform: uppercase; }
-        input, button { padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; }
-        button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background: var(--accent); opacity: 0.9; }
-        button:disabled { background: #94a3b8; cursor: not-allowed; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; }
+        :root { --primary: #003366; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1300px; margin: auto; }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: #eef2f7; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        input, button { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; }
+        button { background: var(--primary); color: white; font-weight: bold; cursor: pointer; border: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th { background: var(--primary); color: white; padding: 12px; text-align: left; font-size: 12px; }
-        td { padding: 10px; border-bottom: 1px solid #f1f5f9; font-size: 12px; color: #1e293b; }
-        tr:hover { background: #f8fafc; }
-        .loader { display: none; color: #1e40af; font-weight: bold; padding: 10px; background: #dbeafe; border-radius: 6px; margin-bottom: 10px; }
+        td { padding: 10px; border-bottom: 1px solid #eee; font-size: 12px; }
+        .status { font-weight: bold; margin-bottom: 10px; display: block; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>🔍 Consulta PNCP - Módulo 07 Completo</h2>
-    
-    <div id="loader" class="loader">⏳ Processando dados do Governo... Por favor, aguarde.</div>
+    <h2>🔍 Consulta PNCP (Lei 14.133) - Módulo 07 & 10</h2>
+    <span id="msgStatus" class="status">Aguardando consulta...</span>
 
     <div class="filter-grid">
-        <div class="group"><label>Início:</label><input type="date" id="d1" value="2024-01-01"></div>
-        <div class="group"><label>Fim:</label><input type="date" id="d2" value="2024-12-31"></div>
-        <div class="group"><label>Cód. Órgão:</label><input type="text" id="codOrgao" placeholder="Ex: 926150"></div>
-        <div class="group"><label>ID Compra:</label><input type="text" id="idCompra" placeholder="Ex: 123/2024"></div>
-        <div class="group"><label>CNPJ Fornecedor:</label><input type="text" id="cnpj" placeholder="Só números"></div>
-        <button id="btn" onclick="executarBusca()">Pesquisar Agora</button>
+        <input type="date" id="dataIni" value="2024-01-01">
+        <input type="date" id="dataFim" value="2024-12-31">
+        <input type="text" id="codOrgao" placeholder="Cód. Órgão (ex: 926150)">
+        <input type="text" id="idCompra" placeholder="ID Compra (ex: 123/2024)">
+        <input type="text" id="cnpj" placeholder="CNPJ Fornecedor">
+        <button onclick="consultarManual()">Consultar Manual</button>
     </div>
 
-    <table id="tabela">
+    <table>
         <thead>
             <tr>
-                <th>Órgão / ID Compra</th>
-                <th>Descrição do Item</th>
+                <th>ID Contratação</th>
+                <th>Órgão</th>
                 <th>Vencedor (CNPJ)</th>
-                <th>Qtd</th>
-                <th>Total Homologado</th>
+                <th>Descrição do Item</th>
+                <th>Valor Total</th>
             </tr>
         </thead>
-        <tbody id="corpo">
-            <tr><td colspan="5" style="text-align:center; padding: 40px; color: #64748b;">Nenhum dado carregado.</td></tr>
-        </tbody>
+        <tbody id="tabelaCorpo"></tbody>
     </table>
 </div>
 
 <script>
-async function executarBusca() {
-    const btn = document.getElementById('btn');
-    const loader = document.getElementById('loader');
-    const corpo = document.getElementById('corpo');
+async function consultarManual() {
+    const status = document.getElementById('msgStatus');
+    const corpo = document.getElementById('tabelaCorpo');
+    
+    // Conforme manual, datas devem ser YYYY-MM-DD para os novos endpoints
+    const dIni = document.getElementById('dataIni').value;
+    const dFim = document.getElementById('dataFim').value;
+    const orgao = document.getElementById('codOrgao').value;
+    const compra = document.getElementById('idCompra').value;
+    const cnpjFiltro = document.getElementById('cnpj').value.replace(/\D/g, "");
+
+    status.innerHTML = "⏳ Consultando API conforme Manual v1.0...";
+    status.style.color = "blue";
+    corpo.innerHTML = "";
+
+    // Endpoint do Serviço 3 do Módulo 07 atualizado
+    let url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataInicial=${dIni.replace(/-/g, "")}&dataFinal=${dFim.replace(/-/g, "")}`;
+    
+    if (orgao) url += `&codigoOrgao=${orgao}`;
+    if (compra) url += `&idCompra=${encodeURIComponent(compra)}`;
+
+    try {
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        const json = await response.json();
+        const data = JSON.parse(json.contents);
+        let resultados = data.resultado || [];
+
+        // Filtro manual de CNPJ (campo niFornecedorVencedor no Módulo 07)
+        if (cnpjFiltro) {
+            resultados = resultados.filter(item => (item.niFornecedorVencedor || "").includes(cnpjFiltro));
+        }
+
+        if (resultados.length === 0) {
+            status.innerHTML = "⚠️ Nenhum dado encontrado.";
+            corpo.innerHTML = '<tr><td colspan="5" style="text-align:center;">Sem registros para os filtros aplicados.</td></tr>';
+            return;
+        }
+
+        resultados.forEach(item => {
+            corpo.innerHTML += `
+                <tr>
+                    <td>${item.idCompra || 'N/A'}</td>
+                    <td>${item.codigoOrgao}</td>
+                    <td>${item.niFornecedorVencedor || 'N/A'}</td>
+                    <td>${item.descricaoItem || 'Sem descrição'}</td>
+                    <td>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR')}</td>
+                </tr>`;
+        });
+        status.innerHTML = `✅ ${resultados.length} itens carregados.`;
+        status.style.color = "green";
+
+    } catch (e) {
+        status.innerHTML = "❌ Erro na requisição. Tente um período menor.";
+        status.style.color = "red";
+    }
+}
+</script>
+</body>
+</html>
