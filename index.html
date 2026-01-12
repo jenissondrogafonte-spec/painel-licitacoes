@@ -3,116 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel PNCP - Módulo 07</title>
+    <title>Painel de Inteligência - PNCP</title>
     <style>
-        :root { --primary: #003366; --accent: #0055aa; --bg: #f8f9fa; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background: var(--bg); }
-        .container { max-width: 1100px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        h2 { color: var(--primary); border-bottom: 3px solid var(--primary); padding-bottom: 10px; margin-top: 0; }
-        .controls { margin-bottom: 25px; display: flex; align-items: center; gap: 15px; }
-        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        button:hover { background: var(--accent); transform: translateY(-1px); }
-        #status { font-weight: bold; font-size: 14px; transition: 0.3s; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; overflow: hidden; border-radius: 8px; }
-        th { background: var(--primary); color: white; padding: 15px; text-align: left; font-size: 14px; }
-        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; color: #333; }
-        tr:hover { background: #f1f5f9; }
-        
-        .cnpj-btn { color: var(--accent); font-weight: bold; cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; }
-        .badge { background: #e0e7ff; color: #4338ca; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+        :root { --primary: #003366; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
+        h2 { color: var(--primary); margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .search-area { margin: 20px 0; display: flex; gap: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background: var(--primary); color: white; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        tr:hover { background: #f9f9f9; }
+        .status { font-weight: bold; margin-bottom: 10px; display: block; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>📡 Monitor de Contratações PNCP (Lei 14.133)</h2>
+<div class="card">
+    <h2>📡 Consulta PNCP - Lei 14.133 (Módulo 07)</h2>
     
-    <div class="controls">
-        <button onclick="buscarDadosDoGoverno()">Atualizar Dados 2025</button>
-        <div id="status">Pronto para consultar</div>
+    <div class="search-area">
+        <input type="text" id="termoBusca" placeholder="Ex: Caneta, Notebook, Limpeza...">
+        <button onclick="chamarGoverno()">Buscar Resultados</button>
     </div>
+
+    <span id="msgStatus" class="status">Aguardando busca...</span>
 
     <table>
         <thead>
             <tr>
                 <th>Descrição do Item</th>
                 <th>Vencedor (CNPJ)</th>
-                <th>Quantidade</th>
+                <th>Qtd</th>
                 <th>Vlr Unitário</th>
-                <th>Total Homologado</th>
+                <th>Total</th>
             </tr>
         </thead>
-        <tbody id="corpoTabela">
-            <tr><td colspan="5" style="text-align: center; padding: 40px; color: #666;">Clique no botão acima para carregar as informações.</td></tr>
+        <tbody id="tabelaCorpo">
+            <tr><td colspan="5" style="text-align:center;">Os dados aparecerão aqui.</td></tr>
         </tbody>
     </table>
 </div>
 
 <script>
-async function buscarDadosDoGoverno() {
-    const status = document.getElementById('status');
-    const corpo = document.getElementById('corpoTabela');
-    
-    status.innerHTML = "⏳ Conectando à API do Governo (via Proxy)...";
+async function chamarGoverno() {
+    const status = document.getElementById('msgStatus');
+    const corpo = document.getElementById('tabelaCorpo');
+    const termo = document.getElementById('termoBusca').value.toLowerCase();
+
+    status.innerHTML = "⏳ Acessando API Compras.gov.br...";
     status.style.color = "orange";
 
-    // URL com filtros de 2025 e paginação (Módulo 07 - Item 3)
-    const dataInicio = "20250101";
-    const dataFim = "20251231";
-    const urlOriginal = `https://dadosabertos.compras.gov.br/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=15&dataInicial=${dataInicio}&dataFinal=${dataFim}`;
+    // URL baseada na sua imagem do Swagger (Módulo 07 - Item 3)
+    // Usamos um período de 2024 a 2026 para garantir que existam dados consolidados
+    const urlAPI = "https://dadosabertos.compras.gov.br/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataInicial=20240101&dataFinal=20261231";
     
-    // Proxy para evitar erro de CORS
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(urlOriginal)}`;
+    // Proxy para contornar o erro de CORS mostrado na sua imagem anterior
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(urlAPI)}`;
 
     try {
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error("Falha na resposta do Proxy");
-        
-        const wrapper = await response.json();
-        const data = JSON.parse(wrapper.contents);
+        const response = await fetch(proxy);
+        const json = await response.json();
+        const data = JSON.parse(json.contents);
 
         if (data.resultado && data.resultado.length > 0) {
-            corpo.innerHTML = ""; // Limpa a tabela
-            data.resultado.forEach(item => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><span class="badge">ITEM</span> ${item.descricaoItem ? item.descricaoItem.substring(0, 80) : 'Sem descrição'}...</td>
-                    <td><button class="cnpj-btn" onclick="consultarFornecedor('${item.niFornecedorVencedor}')">${item.niFornecedorVencedor || 'N/A'}</button></td>
-                    <td>${item.quantidadeHomologada || 0}</td>
-                    <td>R$ ${item.valorUnitarioHomologado?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}</td>
-                    <td><strong>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR', {minimumFractionDigits: 2}) || '0,00'}</strong></td>
-                `;
-                corpo.appendChild(row);
+            // Filtra os resultados pelo que você digitou
+            const filtrados = data.resultado.filter(i => 
+                (i.descricaoItem || "").toLowerCase().includes(termo)
+            );
+
+            if (filtrados.length === 0) {
+                corpo.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum item encontrado com este nome.</td></tr>';
+                status.innerHTML = "⚠️ Termo não encontrado.";
+                return;
+            }
+
+            corpo.innerHTML = "";
+            filtrados.forEach(item => {
+                corpo.innerHTML += `
+                    <tr>
+                        <td>${item.descricaoItem || 'N/A'}</td>
+                        <td>${item.niFornecedorVencedor || 'N/A'}</td>
+                        <td>${item.quantidadeHomologada}</td>
+                        <td>R$ ${item.valorUnitarioHomologado?.toLocaleString('pt-BR')}</td>
+                        <td><strong>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR')}</strong></td>
+                    </tr>`;
             });
-            status.innerHTML = "✅ Dados de 2025 carregados!";
+            status.innerHTML = "✅ Dados carregados com sucesso!";
             status.style.color = "green";
         } else {
-            status.innerHTML = "⚠️ Nenhum dado encontrado para o período de 2025.";
-            status.style.color = "#856404";
-        }
-    } catch (error) {
-        console.error("Erro na consulta:", error);
-        status.innerHTML = "❌ Erro ao acessar a API. Tente novamente.";
-        status.style.color = "red";
-    }
-}
-
-async function consultarFornecedor(cnpj) {
-    if (!cnpj || cnpj === 'N/A') return alert("CNPJ não disponível.");
-    const cnpjLimpo = cnpj.replace(/\D/g, '');
-    
-    try {
-        const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
-        const info = await res.json();
-        
-        if (res.ok) {
-            alert(`🏢 EMPRESA: ${info.razao_social}\n📌 NOME FANTASIA: ${info.nome_fantasia || 'N/A'}\n📍 CIDADE: ${info.municipio}/${info.uf}\n✅ SITUAÇÃO: ${info.descricao_situacao_cadastral}`);
-        } else {
-            alert("Dados detalhados do CNPJ não encontrados na Receita.");
+            status.innerHTML = "⚠️ A API retornou uma lista vazia para estas datas.";
         }
     } catch (e) {
-        alert("Erro ao conectar com a base de dados de CNPJ.");
+        status.innerHTML = "❌ Erro ao conectar. Verifique o Proxy.";
+        status.style.color = "red";
     }
 }
 </script>
