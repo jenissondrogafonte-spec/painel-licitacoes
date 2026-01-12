@@ -4,11 +4,11 @@ const BASE_URL = 'https://dadosabertos.compras.gov.br';
 document.addEventListener('DOMContentLoaded', () => {
   const dataIniEl = document.getElementById('dataIni');
   const dataFimEl = document.getElementById('dataFim');
-  const statusEl = document.getElementById('status');
-  const tbody = document.getElementById('tbody');
+  const statusEl = document.getElementById('status2');   // use um id próprio para o quadro de Resultado
+  const tbody = document.getElementById('tbody2');       // tbody da tabela de Resultado
 
   if (!dataIniEl || !dataFimEl || !statusEl || !tbody) {
-    console.error('IDs de elementos não encontrados. Verifique dataIni, dataFim, status e tbody.');
+    console.error('Verifique os IDs: dataIni, dataFim, status2, tbody2.');
     return;
   }
 
@@ -17,17 +17,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const dataFim = dataFimEl.value;
 
     statusEl.classList.remove('error');
-    statusEl.textContent = 'Consultando contratações no PNCP...';
+    statusEl.textContent = 'Consultando RESULTADO dos itens no PNCP...';
     tbody.innerHTML = '';
 
     try {
       const params = new URLSearchParams();
       params.append('pagina', pagina);
       params.append('tamanhoPagina', 10);
-      if (dataIni) params.append('dataPublicacaoInicial', dataIni);
-      if (dataFim) params.append('dataPublicacaoFinal', dataFim);
+      if (dataIni) params.append('dataResultadoInicial', dataIni);
+      if (dataFim) params.append('dataResultadoFinal', dataFim);
 
-      const url = `${BASE_URL}/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?` + params.toString();
+      // módulo 07 – Resultado dos Itens das Contratações PNCP 14.133 [file:2]
+      const url = `${BASE_URL}/modulo-contratacoes/3_consultarResultadoItensContratacoes_PNCP_14133?` + params.toString();
 
       const resp = await fetch(url);
       if (!resp.ok) throw new Error('Erro HTTP ' + resp.status);
@@ -36,50 +37,49 @@ document.addEventListener('DOMContentLoaded', () => {
       const resultados = data.resultado || [];
 
       if (!Array.isArray(resultados) || resultados.length === 0) {
-        statusEl.textContent = 'Nenhuma contratação encontrada para os filtros informados.';
+        statusEl.textContent = 'Nenhum resultado de item encontrado para os filtros informados.';
         return;
       }
 
       resultados.forEach(item => {
         const tr = document.createElement('tr');
 
-        const tdId = document.createElement('td');
-        tdId.textContent = item.idCompra || item.identificador || item.idcompra || '';
-        tr.appendChild(tdId);
-
+        // Órgão (código)
         const tdOrgao = document.createElement('td');
-        tdOrgao.textContent = item.nomeOrgao || item.nomeOrgaoResponsavel || item.noorgao || '';
+        tdOrgao.textContent = item.orgaoEntidadeCnpj || item.unidadeOrgaoCodigoUnidade || '';
         tr.appendChild(tdOrgao);
 
-        const tdUasg = document.createElement('td');
-        tdUasg.textContent = item.codigoUasg || item.uasg || '';
-        tr.appendChild(tdUasg);
+        // Fornecedor (CNPJ)
+        const tdFornecedor = document.createElement('td');
+        tdFornecedor.textContent = item.niFornecedor || '';
+        tr.appendChild(tdFornecedor);
 
-        const tdObjeto = document.createElement('td');
-        tdObjeto.textContent = item.objeto || item.objetoCompra || item.txobjeto || '';
-        tr.appendChild(tdObjeto);
+        // Descrição do item (não vem nesse endpoint; placeholder)
+        const tdDescricao = document.createElement('td');
+        tdDescricao.textContent = `Item PNCP nº ${item.numeroItemPncp || ''}`;
+        tr.appendChild(tdDescricao);
 
-        const tdDataPub = document.createElement('td');
-        tdDataPub.textContent = item.dataPublicacao || item.datapublicacao || item.dataCompra || '';
-        tr.appendChild(tdDataPub);
-
-        const tdValorEst = document.createElement('td');
-        tdValorEst.textContent = item.valorEstimadoTotal || item.valorestimadototal || '';
-        tr.appendChild(tdValorEst);
-
-        const tdValorHom = document.createElement('td');
-        tdValorHom.textContent = item.valorHomologadoTotal || item.valorhomologadototal || '';
-        tr.appendChild(tdValorHom);
+        // Valor total homologado
+        const tdValorTotal = document.createElement('td');
+        tdValorTotal.textContent = item.valorTotalHomologado != null
+          ? item.valorTotalHomologado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+          : '';
+        tr.appendChild(tdValorTotal);
 
         tbody.appendChild(tr);
       });
 
       statusEl.textContent = `Exibindo ${resultados.length} registros.`;
+
     } catch (e) {
       console.error(e);
-      statusEl.textContent = 'Erro ao consultar a API: ' + e.message;
+      statusEl.textContent = 'Erro ao consultar a API (resultado de itens): ' + e.message;
       statusEl.classList.add('error');
     }
   }
 
-  // expõe a função 
+  // expõe a função para o botão do segundo painel
+  window.buscarResultado = buscar;
+  buscar();
+});
+</script>
