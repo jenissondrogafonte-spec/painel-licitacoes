@@ -5,10 +5,111 @@
   <title>Painel PNCP - Conectado</title>
   <style>
     body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f8fafc; }
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 20px 0; }
-    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; padding: 15px; background: #eef2f7; border-radius: 8px; }
+    .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; padding: 20px; background: #eef2f7; border-radius: 8px; margin-bottom: 20px; }
     input, button { padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
-    button { background: #003366; color: white; border: none; cursor: pointer; font-weight: bold; }
+    button { background: #003366; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
     button:hover { background: #002855; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th { background
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
+    th { background: #003366; color: white; padding: 12px; text-align: left; font-size: 13px; }
+    td { padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+    tr:hover { background: #f1f5f9; }
+    .status { font-weight: bold; margin-bottom: 10px; display: block; padding: 10px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>📋 Consulta de Resultados PNCP (Mar/2025)</h2>
+  
+  <div id="msgStatus" class="status" style="background: #e2e8f0;">Aguardando filtros...</div>
+
+  <div class="filters">
+    <div style="display:flex; flex-direction:column">
+        <label style="font-size:11px; font-weight:bold">Início (Publicação):</label>
+        <input type="date" id="dataIni" value="2025-01-01">
+    </div>
+    <div style="display:flex; flex-direction:column">
+        <label style="font-size:11px; font-weight:bold">Fim (Publicação):</label>
+        <input type="date" id="dataFim" value="2025-01-10">
+    </div>
+    <input type="text" id="codOrgao" placeholder="Código Órgão (Ex: 926150)">
+    <input type="text" id="cnpj" placeholder="Filtrar CNPJ Fornecedor">
+    <button onclick="executarBusca()">Pesquisar na API</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID Contratação</th>
+        <th>Fornecedor (CNPJ/Nome)</th>
+        <th>Descrição do Item</th>
+        <th>Valor Total</th>
+      </tr>
+    </thead>
+    <tbody id="tabelaCorpo">
+        <tr><td colspan="4" style="text-align:center; padding: 30px; color: #666;">Os dados aparecerão aqui após a busca.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+async function executarBusca() {
+    const d1 = document.getElementById('dataIni').value;
+    const d2 = document.getElementById('dataFim').value;
+    const orgao = document.getElementById('codOrgao').value.trim();
+    const cnpjFiltro = document.getElementById('cnpj').value.replace(/\D/g, "");
+    
+    const status = document.getElementById('msgStatus');
+    const corpo = document.getElementById('tabelaCorpo');
+
+    status.innerHTML = "⏳ Conectando à API do Governo Federal...";
+    status.style.background = "#fff3cd";
+    status.style.color = "#856404";
+
+    // Endpoint 7 conforme Manual v1.0 Mar/25 pág. 97
+    let url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataPublicacaoPncpInicial=${d1}&dataPublicacaoPncpFinal=${d2}`;
+    
+    if (orgao) url += `&codigoOrgao=${orgao}`;
+
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+
+    try {
+        const response = await fetch(proxy);
+        const wrapper = await response.json();
+        const data = JSON.parse(wrapper.contents);
+        let lista = data.resultado || [];
+
+        // Filtro de CNPJ usando o campo 'niFornecedor' (conforme o JSON que você recebeu)
+        if (cnpjFiltro) {
+            lista = lista.filter(i => (i.niFornecedor || "").includes(cnpjFiltro));
+        }
+
+        if (lista.length === 0) {
+            corpo.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Nenhum dado encontrado para o período/órgão informado.</td></tr>";
+            status.innerHTML = "⚠️ Busca concluída: Sem resultados.";
+            status.style.background = "#fee2e2";
+        } else {
+            corpo.innerHTML = "";
+            lista.forEach(item => {
+                corpo.innerHTML += `
+                <tr>
+                    <td><strong>${item.idContratacaoPNCP || 'N/A'}</strong></td>
+                    <td>${item.niFornecedor || 'N/A'}<br><small>${item.nomeRazaoSocialFornecedor || ''}</small></td>
+                    <td>${item.descricaoItem || 'Sem descrição'}</td>
+                    <td>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR') || '0,00'}</td>
+                </tr>`;
+            });
+            status.innerHTML = `✅ Sucesso: ${lista.length} registros encontrados!`;
+            status.style.background = "#dcfce7";
+            status.style.color = "#166534";
+        }
+    } catch (e) {
+        status.innerHTML = "❌ Erro ao conectar ou processar dados.";
+        status.style.background = "#fee2e2";
+        status.style.color = "#991b1b";
+    }
+}
+</script>
+</body>
+</html>
