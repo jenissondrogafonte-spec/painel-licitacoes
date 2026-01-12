@@ -1,66 +1,3 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <title>Painel PNCP - Conectado</title>
-  <style>
-    :root { --primary: #003366; --bg: #f8fafc; }
-    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
-    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
-    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #eef2f7; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    input, button { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; }
-    button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
-    button:hover { filter: brightness(0.9); }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th { background: var(--primary); color: white; padding: 8px; text-align: left; font-size: 12px; }
-    td { padding: 8px; border-bottom: 1px solid #eee; font-size: 12px; }
-    .status { font-weight: bold; margin-bottom: 10px; display: block; color: green; }
-    .error { color: #b91c1c; }
-  </style>
-</head>
-<body>
-
-<div class="card">
-  <h2>✅ Conexão Estabelecida com o PNCP</h2>
-
-  <div class="filter-grid">
-    <div>
-      <label>Data Inicial (publicação)</label>
-      <input type="date" id="dataIni" value="2024-01-01">
-    </div>
-    <div>
-      <label>Data Final (publicação)</label>
-      <input type="date" id="dataFim" value="2024-03-31">
-    </div>
-    <div>
-      <label>CNPJ Vencedor (opcional)</label>
-      <input type="text" id="cnpj" placeholder="Filtrar CNPJ Vencedor">
-    </div>
-    <div style="display:flex;align-items:flex-end;">
-      <button onclick="buscar()">Atualizar Busca</button>
-    </div>
-  </div>
-
-  <div id="status" class="status"></div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Id Contratação</th>
-        <th>Órgão</th>
-        <th>UASG</th>
-        <th>Objeto</th>
-        <th>Data Publicação</th>
-        <th>Valor Estimado</th>
-        <th>Valor Homologado</th>
-      </tr>
-    </thead>
-    <tbody id="tbody">
-      <!-- linhas geradas via JS -->
-    </tbody>
-  </table>
-</div>
-
 <script>
 const BASE_URL = 'https://dadosabertos.compras.gov.br';
 
@@ -68,21 +5,21 @@ const BASE_URL = 'https://dadosabertos.compras.gov.br';
 async function buscar(pagina = 1) {
   const dataIni = document.getElementById('dataIni').value;
   const dataFim = document.getElementById('dataFim').value;
-  const cnpj = document.getElementById('cnpj').value.trim();
 
   const statusEl = document.getElementById('status');
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
+  statusEl.classList.remove('error');
   statusEl.textContent = 'Consultando contratações no PNCP...';
 
   try {
     const params = new URLSearchParams();
     params.append('pagina', pagina);
-    params.append('tamanhoPagina', 50); // limite até 500, conforme manual
+    params.append('tamanhoPagina', 50); // até 500, conforme manual [file:2]
     if (dataIni) params.append('dataPublicacaoInicial', dataIni);
     if (dataFim) params.append('dataPublicacaoFinal', dataFim);
-    if (cnpj) params.append('niFornecedor', cnpj); // campo de filtro para fornecedor, conforme módulo de contratações [file:2]
 
+    // endpoint principal do módulo 07 (Contratações PNCP 14.133) [file:2]
     const url = `${BASE_URL}/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?` + params.toString();
 
     const resp = await fetch(url);
@@ -98,16 +35,18 @@ async function buscar(pagina = 1) {
       return;
     }
 
-    // Preenche a tabela com alguns campos principais (ajuste conforme o payload do manual) [file:2]
     resultados.forEach(item => {
       const tr = document.createElement('tr');
 
+      // Os nomes dos campos abaixo devem ser ajustados de acordo com o payload real.
+      // Usei campos padrão descritos no manual de contratações/legado. [file:2]
+
       const tdId = document.createElement('td');
-      tdId.textContent = item.idCompra || item.identificador || '';
+      tdId.textContent = item.idCompra || item.identificador || item.idcompra || '';
       tr.appendChild(tdId);
 
       const tdOrgao = document.createElement('td');
-      tdOrgao.textContent = item.nomeOrgao || '';
+      tdOrgao.textContent = item.nomeOrgao || item.nomeOrgaoResponsavel || item.noorgao || '';
       tr.appendChild(tdOrgao);
 
       const tdUasg = document.createElement('td');
@@ -115,11 +54,11 @@ async function buscar(pagina = 1) {
       tr.appendChild(tdUasg);
 
       const tdObjeto = document.createElement('td');
-      tdObjeto.textContent = item.objeto || item.descricaoObjeto || '';
+      tdObjeto.textContent = item.objeto || item.objetoCompra || item.txobjeto || '';
       tr.appendChild(tdObjeto);
 
       const tdDataPub = document.createElement('td');
-      tdDataPub.textContent = item.dataPublicacao || item.dataAbertura || '';
+      tdDataPub.textContent = item.dataPublicacao || item.datapublicacao || item.dataCompra || '';
       tr.appendChild(tdDataPub);
 
       const tdValorEst = document.createElement('td');
@@ -145,96 +84,3 @@ async function buscar(pagina = 1) {
 // dispara busca inicial ao carregar a página
 buscar();
 </script>
-
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>Painel PNCP - Conectado</title>
-    <style>
-        :root { --primary: #003366; --bg: #f8fafc; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #eef2f7; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        input, button { padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; }
-        button { background: var(--primary); color: white; border: none; font-weight: bold; cursor: pointer; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th { background: var(--primary); color: white; padding: 12px; text-align: left; }
-        td { padding: 10px; border-bottom: 1px solid #eee; font-size: 12px; }
-        .status { font-weight: bold; margin-bottom: 10px; display: block; color: green; }
-    </style>
-</head>
-<body>
-
-<div class="card">
-    <h2>✅ Conexão Estabelecida com o PNCP</h2>
-    <div class="filter-grid">
-        <input type="date" id="d1" value="2024-01-01">
-        <input type="date" id="d2" value="2024-01-31">
-        <input type="text" id="cnpj" placeholder="Filtrar CNPJ Vencedor">
-        <button onclick="buscar()">Atualizar Busca</button>
-    </div>
-
-    <div id="status"></div>
-    <table>
-        <thead>
-            <tr>
-                <th>Órgão (Código)</th>
-                <th>Fornecedor (CNPJ)</th>
-                <th>Descrição do Item</th>
-                <th>Valor Total</th>
-            </tr>
-        </thead>
-        <tbody id="corpo"></tbody>
-    </table>
-</div>
-
-<script>
-async function buscar() {
-    const d1 = document.getElementById('d1').value;
-    const d2 = document.getElementById('d2').value;
-    const cnpjFiltro = document.getElementById('cnpj').value.replace(/\D/g, "");
-    const corpo = document.getElementById('corpo');
-    const status = document.getElementById('status');
-
-    status.innerHTML = "⏳ Lendo dados retornados...";
-    corpo.innerHTML = "";
-
-    // Endpoint 7 conforme Manual Mar/25 pág. 97
-    const url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataPublicacaoPncpInicial=${d1}&dataPublicacaoPncpFinal=${d2}`;
-    
-    try {
-        const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-        const response = await fetch(proxy);
-        const wrapper = await response.json();
-        const data = JSON.parse(wrapper.contents);
-        let lista = data.resultado || [];
-
-        // Filtro de CNPJ usando o campo 'niFornecedor' que apareceu no seu JSON
-        if (cnpjFiltro) {
-            lista = lista.filter(i => (i.niFornecedor || "").includes(cnpjFiltro));
-        }
-
-        if (lista.length === 0) {
-            corpo.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Nenhum dado encontrado para este período.</td></tr>";
-            status.innerHTML = "⚠️ Lista vazia.";
-        } else {
-            lista.forEach(item => {
-                corpo.innerHTML += `<tr>
-                    <td>${item.codigoOrgao || 'N/A'}</td>
-                    <td>${item.niFornecedor || 'N/A'}<br><small>${item.nomeRazaoSocialFornecedor || ''}</small></td>
-                    <td>${item.descricaoItem || 'Sem descrição'}</td>
-                    <td>R$ ${item.valorTotalHomologado?.toLocaleString('pt-BR') || '0,00'}</td>
-                </tr>`;
-            });
-            status.innerHTML = `✅ ${lista.length} registros exibidos com sucesso!`;
-        }
-    } catch (e) {
-        status.innerHTML = "❌ Erro ao processar o JSON.";
-    }
-}
-</script>
-</body>
-</html>
