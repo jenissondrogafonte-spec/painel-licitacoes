@@ -1,86 +1,85 @@
 <script>
 const BASE_URL = 'https://dadosabertos.compras.gov.br';
 
-// Função principal de busca no módulo 07 - 1_consultarContratacoes_PNCP_14133
-async function buscar(pagina = 1) {
-  const dataIni = document.getElementById('dataIni').value;
-  const dataFim = document.getElementById('dataFim').value;
-
+document.addEventListener('DOMContentLoaded', () => {
+  const dataIniEl = document.getElementById('dataIni');
+  const dataFimEl = document.getElementById('dataFim');
   const statusEl = document.getElementById('status');
   const tbody = document.getElementById('tbody');
-  tbody.innerHTML = '';
-  statusEl.classList.remove('error');
-  statusEl.textContent = 'Consultando contratações no PNCP...';
 
-  try {
-    const params = new URLSearchParams();
-    params.append('pagina', pagina);
-    params.append('tamanhoPagina', 50); // até 500, conforme manual [file:2]
-    if (dataIni) params.append('dataPublicacaoInicial', dataIni);
-    if (dataFim) params.append('dataPublicacaoFinal', dataFim);
-
-    // endpoint principal do módulo 07 (Contratações PNCP 14.133) [file:2]
-    const url = `${BASE_URL}/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?` + params.toString();
-
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      throw new Error('Erro HTTP ' + resp.status);
-    }
-
-    const data = await resp.json();
-
-    const resultados = data.resultado || [];
-    if (resultados.length === 0) {
-      statusEl.textContent = 'Nenhuma contratação encontrada para os filtros informados.';
-      return;
-    }
-
-    resultados.forEach(item => {
-      const tr = document.createElement('tr');
-
-      // Os nomes dos campos abaixo devem ser ajustados de acordo com o payload real.
-      // Usei campos padrão descritos no manual de contratações/legado. [file:2]
-
-      const tdId = document.createElement('td');
-      tdId.textContent = item.idCompra || item.identificador || item.idcompra || '';
-      tr.appendChild(tdId);
-
-      const tdOrgao = document.createElement('td');
-      tdOrgao.textContent = item.nomeOrgao || item.nomeOrgaoResponsavel || item.noorgao || '';
-      tr.appendChild(tdOrgao);
-
-      const tdUasg = document.createElement('td');
-      tdUasg.textContent = item.codigoUasg || item.uasg || '';
-      tr.appendChild(tdUasg);
-
-      const tdObjeto = document.createElement('td');
-      tdObjeto.textContent = item.objeto || item.objetoCompra || item.txobjeto || '';
-      tr.appendChild(tdObjeto);
-
-      const tdDataPub = document.createElement('td');
-      tdDataPub.textContent = item.dataPublicacao || item.datapublicacao || item.dataCompra || '';
-      tr.appendChild(tdDataPub);
-
-      const tdValorEst = document.createElement('td');
-      tdValorEst.textContent = item.valorEstimadoTotal || item.valorestimadototal || '';
-      tr.appendChild(tdValorEst);
-
-      const tdValorHom = document.createElement('td');
-      tdValorHom.textContent = item.valorHomologadoTotal || item.valorhomologadototal || '';
-      tr.appendChild(tdValorHom);
-
-      tbody.appendChild(tr);
-    });
-
-    statusEl.textContent = `Exibindo ${resultados.length} registros (página ${data.pagina || pagina} de ${data.totalPaginas || '?'}).`;
-
-  } catch (e) {
-    console.error(e);
-    statusEl.textContent = 'Erro ao consultar a API de contratações: ' + e.message;
-    statusEl.classList.add('error');
+  if (!dataIniEl || !dataFimEl || !statusEl || !tbody) {
+    console.error('IDs de elementos não encontrados. Verifique dataIni, dataFim, status e tbody.');
+    return;
   }
-}
 
-// dispara busca inicial ao carregar a página
-buscar();
-</script>
+  async function buscar(pagina = 1) {
+    const dataIni = dataIniEl.value;
+    const dataFim = dataFimEl.value;
+
+    statusEl.classList.remove('error');
+    statusEl.textContent = 'Consultando contratações no PNCP...';
+    tbody.innerHTML = '';
+
+    try {
+      const params = new URLSearchParams();
+      params.append('pagina', pagina);
+      params.append('tamanhoPagina', 10);
+      if (dataIni) params.append('dataPublicacaoInicial', dataIni);
+      if (dataFim) params.append('dataPublicacaoFinal', dataFim);
+
+      const url = `${BASE_URL}/modulo-contratacoes/1_consultarContratacoes_PNCP_14133?` + params.toString();
+
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error('Erro HTTP ' + resp.status);
+
+      const data = await resp.json();
+      const resultados = data.resultado || [];
+
+      if (!Array.isArray(resultados) || resultados.length === 0) {
+        statusEl.textContent = 'Nenhuma contratação encontrada para os filtros informados.';
+        return;
+      }
+
+      resultados.forEach(item => {
+        const tr = document.createElement('tr');
+
+        const tdId = document.createElement('td');
+        tdId.textContent = item.idCompra || item.identificador || item.idcompra || '';
+        tr.appendChild(tdId);
+
+        const tdOrgao = document.createElement('td');
+        tdOrgao.textContent = item.nomeOrgao || item.nomeOrgaoResponsavel || item.noorgao || '';
+        tr.appendChild(tdOrgao);
+
+        const tdUasg = document.createElement('td');
+        tdUasg.textContent = item.codigoUasg || item.uasg || '';
+        tr.appendChild(tdUasg);
+
+        const tdObjeto = document.createElement('td');
+        tdObjeto.textContent = item.objeto || item.objetoCompra || item.txobjeto || '';
+        tr.appendChild(tdObjeto);
+
+        const tdDataPub = document.createElement('td');
+        tdDataPub.textContent = item.dataPublicacao || item.datapublicacao || item.dataCompra || '';
+        tr.appendChild(tdDataPub);
+
+        const tdValorEst = document.createElement('td');
+        tdValorEst.textContent = item.valorEstimadoTotal || item.valorestimadototal || '';
+        tr.appendChild(tdValorEst);
+
+        const tdValorHom = document.createElement('td');
+        tdValorHom.textContent = item.valorHomologadoTotal || item.valorhomologadototal || '';
+        tr.appendChild(tdValorHom);
+
+        tbody.appendChild(tr);
+      });
+
+      statusEl.textContent = `Exibindo ${resultados.length} registros.`;
+    } catch (e) {
+      console.error(e);
+      statusEl.textContent = 'Erro ao consultar a API: ' + e.message;
+      statusEl.classList.add('error');
+    }
+  }
+
+  // expõe a função 
