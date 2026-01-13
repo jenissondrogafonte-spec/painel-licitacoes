@@ -1,138 +1,67 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Licitações ComprasNet</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f9fa; }
-        h1 { color: #007bff; text-align: center; }
-        form { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        label { display: block; margin-bottom: 12px; font-weight: bold; color: #333; }
-        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
-        button { background: #28a745; color: white; padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
-        button:hover { background: #218838; }
-        table { border-collapse: collapse; width: 100%; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; }
-        th { background: #007bff; color: white; padding: 15px; text-align: left; font-weight: bold; }
-        td { padding: 12px 15px; border-bottom: 1px solid #eee; }
-        tr:hover { background: #f8f9fa; }
-        tr:nth-child(even) { background: #f8f9fa; }
-        .loading { text-align: center; padding: 30px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; }
-        .info { background: #d4edda; padding: 15px; border-radius: 5px; margin-top: 20px; font-size: 14px; }
-        @media (max-width: 768px) { body { padding: 10px; } input, button { font-size: 18px; } }
-    </style>
-</head>
-<body>
-    <h1>🔍 Painel de Consulta Licitações ComprasNet</h1>
-    <form id="form-busca">
-        <label>🆔 UASG (ex: 389144):</label>
-        <input type="number" id="uasg" placeholder="Código da unidade gestora">
-        
-        <label>📝 Nº Licitação (ex: 901402025):</label>
-        <input type="text" id="numero" placeholder="Número do aviso da licitação">
-        
-        <label>📄 Objeto (ex: medicamento):</label>
-        <input type="text" id="objeto" placeholder="Palavras-chave do objeto">
-        
-        <button type="submit">🚀 Buscar Licitações</button>
-    </form>
+<script>
+document.getElementById('form-busca').addEventListener('submit', async (e) => {
+    e.preventDefault();
     
-    <div id="loading" class="loading">
-        <h3>⏳ Carregando dados da API ComprasNet...</h3>
-    </div>
+    const uasg = document.getElementById('uasg').value.trim();
+    const numero = document.getElementById('numero').value.trim();
+    const objeto = document.getElementById('objeto').value.trim();
     
-    <div id="info" class="info" style="display:none;"></div>
+    // DEBUG: Mostra exatamente o que foi digitado
+    console.log('🔍 Digitado:', {uasg, numero, objeto});
     
-    <table id="tabela-resultados">
-        <thead>
+    if (!uasg && !numero && !objeto) {
+        return alert('Informe filtro!');
+    }
+    
+    const params = new URLSearchParams({ limit: '50' });
+    if (uasg) params.append('uasg', uasg);
+    if (numero) params.append('numero_aviso', numero);
+    if (objeto) params.append('objeto', objeto);
+    
+    const apiUrl = `http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?${params}`;
+    console.log('🌐 URL chamada:', apiUrl); // DEBUG URL
+    
+    const proxyUrls = ['https://api.allorigins.win/raw?url=' + encodeURIComponent(apiUrl)];
+    
+    const loading = document.getElementById('loading');
+    const tabela = document.getElementById('tabela-resultados');
+    const info = document.getElementById('info');
+    
+    loading.style.display = 'block';
+    tabela.style.display = 'none';
+    info.style.display = 'none';
+    
+    let data;
+    for (let proxyUrl of proxyUrls) {
+        try {
+            const response = await fetch(proxyUrl);
+            data = await response.json();
+            console.log('📊 Resposta API:', data); // DEBUG resposta
+            break;
+        } catch (err) {
+            console.error('❌ Erro proxy:', err);
+        }
+    }
+    
+    loading.style.display = 'none';
+    
+    info.innerHTML = `🔍 Busca: UASG=<b>${uasg}</b> Nº=<b>${numero}</b> Objeto=<b>${objeto}</b><br>📊 URL: <a href="${apiUrl}" target="_blank">${apiUrl}</a><br>${data?.resultado?.length || 0} resultados`;
+    info.style.display = 'block';
+    
+    if (!data?.resultado?.length) return;
+    
+    const tbody = tabela.querySelector('tbody');
+    tbody.innerHTML = '';
+    data.resultado.slice(0, 20).forEach(lic => {
+        tbody.innerHTML += `
             <tr>
-                <th>Nº Aviso</th>
-                <th>UASG</th>
-                <th>Objeto</th>
-                <th>Data Publicação</th>
-                <th>Modalidade</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-
-    <script>
-        document.getElementById('form-busca').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const uasg = document.getElementById('uasg').value.trim();
-            const numero = document.getElementById('numero').value.trim();
-            const objeto = document.getElementById('objeto').value.trim();
-            
-            if (!uasg && !numero && !objeto) {
-                return alert('⚠️ Informe pelo menos um filtro: UASG, Nº Licitação ou Objeto!');
-            }
-            
-            const params = new URLSearchParams({ limit: '200' });
-            if (uasg) params.append('uasg', uasg);
-            if (numero) params.append('numero_aviso', numero);
-            if (objeto) params.append('objeto', objeto);
-            
-            const apiUrl = `http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?${params}`;
-            const proxyUrls = [
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
-                `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
-                `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(apiUrl)}`
-            ];
-            
-            const loading = document.getElementById('loading');
-            const tabela = document.getElementById('tabela-resultados');
-            const info = document.getElementById('info');
-            
-            loading.style.display = 'block';
-            tabela.style.display = 'none';
-            info.style.display = 'none';
-            
-            let data;
-            for (let proxyUrl of proxyUrls) {
-                try {
-                    console.log('Tentando proxy:', proxyUrl);
-                    const response = await fetch(proxyUrl, { 
-                        method: 'GET',
-                        headers: { 'Accept': 'application/json' }
-                    });
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    data = await response.json();
-                    if (data.resultado) break;
-                } catch (err) {
-                    console.warn('Proxy falhou:', proxyUrl, err);
-                }
-            }
-            
-            loading.style.display = 'none';
-            
-            if (!data || !data.resultado || data.resultado.length === 0) {
-                info.innerHTML = '❌ Nenhum resultado encontrado. Tente:<br>- UASG: <b>389144</b><br>- Nº Licitação: <b>901402025</b><br>- Objeto: <b>medicamento</b>';
-                info.style.display = 'block';
-                return;
-            }
-            
-            info.innerHTML = `✅ Encontrados <b>${data.resultado.length}</b> resultados (mostrando ${Math.min(50, data.resultado.length)}). Fonte: <a href="${apiUrl}" target="_blank">API ComprasNet</a>`;
-            info.style.display = 'block';
-            
-            const tbody = tabela.querySelector('tbody');
-            tbody.innerHTML = '';
-            
-            data.resultado.slice(0, 50).forEach((lic, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><strong>${lic.numero_aviso || '-'}</strong></td>
-                    <td>${lic.uasg || '-'}</td>
-                    <td>${(lic.objeto || '').substring(0, 80)}${(lic.objeto || '').length > 80 ? '...' : ''}</td>
-                    <td>${lic.data_publicacao || '-'}</td>
-                    <td>${lic.modalidade || '-'}</td>
-                `;
-                tbody.appendChild(row);
-            });
-            
-            tabela.style.display = 'table';
-            tbody.scrollIntoView({ behavior: 'smooth' });
-        });
-    </script>
-</body>
-</html>
+                <td>${lic.numero_aviso || '-'}</td>
+                <td>${lic.uasg || '-'}</td>
+                <td>${lic.objeto?.substring(0, 80) || '-'}</td>
+                <td>${lic.data_publicacao || '-'}</td>
+                <td>${lic.modalidade || '-'}</td>
+            </tr>`;
+    });
+    tabela.style.display = 'table';
+});
+</script>
