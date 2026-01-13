@@ -1,129 +1,42 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>PNCP Explorer - Módulo Contratações</title>
-    <style>
-        :root { --blue: #003366; --green: #27ae60; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); max-width: 1300px; margin: auto; }
-        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; background: #eef2f7; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        input, button { padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; }
-        .btn-search { background: var(--blue); color: white; border: none; font-weight: bold; cursor: pointer; }
-        .btn-csv { background: var(--green); color: white; border: none; font-weight: bold; cursor: pointer; display: none; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th { background: var(--blue); color: white; padding: 12px; text-align: left; }
-        td { padding: 10px; border-bottom: 1px solid #eee; background: white; }
-        .loading-msg { display: none; color: #003366; font-weight: bold; margin-bottom: 10px; }
-    </style>
+    <title>Consulta Licitações ComprasNet</title>
+    <style>body { font-family: Arial; } table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #ddd; padding: 8px; }</style>
 </head>
 <body>
-
-<div class="card">
-    <h2>🔍 Consulta PNCP (Módulo Contratações/Itens)</h2>
-    <div id="loading" class="loading-msg">⏳ Consultando Swagger PNCP... Isso pode levar alguns segundos.</div>
-
-    <div class="filter-grid">
-        <input type="date" id="dataIni" value="2025-01-01">
-        <input type="date" id="dataFim" value="2025-01-15">
-        <input type="text" id="uasg" placeholder="UASG (Ex: 926150)">
-        <input type="text" id="cnpj" placeholder="CNPJ (Opcional)">
-        <input type="text" id="licitacao" placeholder="Nº Licitação">
-        <button class="btn-search" onclick="buscarNoPNCP()">PESQUISAR</button>
-        <button class="btn-csv" id="btnCsv" onclick="baixarCSV()">BAIXAR EXCEL</button>
-    </div>
-
-    <table id="tabelaRes">
-        <thead>
-            <tr>
-                <th>UASG</th>
-                <th>Licitação/Compra</th>
-                <th>Objeto/Descrição</th>
-                <th>Data Assinatura/Public.</th>
-                <th>Valor Total</th>
-            </tr>
-        </thead>
-        <tbody id="corpoTabela">
-            <tr><td colspan="5" style="text-align:center; padding:40px;">Insira os dados e clique em Pesquisar.</td></tr>
-        </tbody>
+    <h1>Consulta de Licitações</h1>
+    <form id="form-busca">
+        <label>UASG: <input type="number" id="uasg" placeholder="ex: 389144"></label>
+        <label>Objeto: <input type="text" id="objeto" placeholder="ex: medicamento"></label>
+        <button type="submit">Buscar</button>
+    </form>
+    <table id="tabela-resultados" style="display:none;">
+        <thead><tr><th>Nº Aviso</th><th>Objeto</th><th>UASG</th><th>Data Publicação</th></tr></thead>
+        <tbody></tbody>
     </table>
-</div>
-
-<script>
-let dadosCache = [];
-
-async function buscarNoPNCP() {
-    const loader = document.getElementById('loading');
-    const corpo = document.getElementById('corpoTabela');
-    const btnCsv = document.getElementById('btnCsv');
-    
-    const d1 = document.getElementById('dataIni').value.replace(/-/g, ""); // Formato AAAAMMDD se necessário
-    const d2 = document.getElementById('dataFim').value.replace(/-/g, "");
-    const d1Original = document.getElementById('dataIni').value;
-    const d2Original = document.getElementById('dataFim').value;
-    const uasg = document.getElementById('uasg').value.trim();
-    const cnpj = document.getElementById('cnpj').value.trim();
-    const licitacao = document.getElementById('licitacao').value.trim();
-
-    loader.style.display = "block";
-    btnCsv.style.display = "none";
-    corpo.innerHTML = "";
-
-    // ENDPOINT DO LINK QUE VOCÊ ENVIOU: consultarContratacoes_PNCP_14133
-    // Parâmetros corrigidos: codigoUnidadeGestora (UASG)
-    let url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataPublicacaoPncpInicial=${d1Original}&dataPublicacaoPncpFinal=${d2Original}`;
-    
-    if (uasg) url += `&codigoUnidadeGestora=${uasg}`;
-
-    try {
-        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-        const wrapper = await response.json();
-        const data = JSON.parse(wrapper.contents);
-        let lista = data.resultado || [];
-
-        // Filtros Manuais (CNPJ e Licitação) para garantir o "Zero Erro"
-        if (licitacao) {
-            lista = lista.filter(i => (i.numeroCompra || "").includes(licitacao) || (i.idContratacaoPNCP || "").includes(licitacao));
-        }
-        if (cnpj) {
-            lista = lista.filter(i => (i.niFornecedor || "").includes(cnpj));
-        }
-
-        if (lista.length === 0) {
-            corpo.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Nenhum registro encontrado para estes filtros no Módulo de Contratações.</td></tr>";
-        } else {
-            dadosCache = lista;
-            lista.forEach(item => {
-                const valor = item.valorTotalContratado || item.valorEstimado || 0;
-                corpo.innerHTML += `
-                    <tr>
-                        <td>${item.codigoUnidadeGestora || uasg}</td>
-                        <td><strong>${item.numeroCompra || '---'}</strong></td>
-                        <td>${item.objetoContratacao || item.descricaoItem || '---'}</td>
-                        <td>${item.dataPublicacaoPncp || '---'}</td>
-                        <td>${valor.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}</td>
-                    </tr>`;
-            });
-            btnCsv.style.display = "block";
-        }
-    } catch (err) {
-        corpo.innerHTML = "<tr><td colspan='5' style='text-align:center; color:red;'>Erro ao conectar com o PNCP. Verifique a UASG.</td></tr>";
-    } finally {
-        loader.style.display = "none";
-    }
-}
-
-function baixarCSV() {
-    let csv = "\ufeffUASG;Licitacao;Descricao;Data;Valor\n";
-    dadosCache.forEach(i => {
-        csv += `${i.codigoUnidadeGestora};${i.numeroCompra};"${i.objetoContratacao}";${i.dataPublicacaoPncp};${i.valorTotalContratado}\n`;
-    });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "relatorio_pncp_contratacoes.csv";
-    link.click();
-}
-</script>
+    <script>
+        document.getElementById('form-busca').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const uasg = document.getElementById('uasg').value;
+            const objeto = document.getElementById('objeto').value;
+            const params = new URLSearchParams({ uasg, objeto }).toString();
+            const url = `http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?${params}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                const tbody = document.querySelector('#tabela-resultados tbody');
+                tbody.innerHTML = '';
+                data.resultado.forEach(lic => {
+                    const row = `<tr><td>${lic.numero_aviso}</td><td>${lic.objeto}</td><td>${lic.uasg}</td><td>${lic.data_publicacao}</td></tr>`;
+                    tbody.innerHTML += row;
+                });
+                document.getElementById('tabela-resultados').style.display = 'table';
+            } catch (error) {
+                alert('Erro na busca: ' + error);
+            }
+        });
+    </script>
 </body>
 </html>
