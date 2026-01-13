@@ -2,106 +2,125 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel PNCP - Estável</title>
+    <title>Painel Avançado PNCP - UASG/CNPJ</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 1200px; margin: auto; }
-        .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; background: #e9ecef; padding: 15px; border-radius: 8px; }
-        input, button { padding: 10px; border-radius: 5px; border: 1px solid #ccc; }
-        button { background: #003366; color: white; cursor: pointer; border: none; font-weight: bold; }
-        button:disabled { background: #6c757d; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #003366; color: white; padding: 12px; text-align: left; }
-        td { padding: 10px; border-bottom: 1px solid #dee2e6; font-size: 13px; }
-        .alert { padding: 10px; margin-bottom: 15px; border-radius: 5px; font-weight: bold; }
-        .error { background: #f8d7da; color: #721c24; }
-        .info { background: #cce5ff; color: #004085; }
+        :root { --gov-blue: #003366; --accent: #27ae60; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); max-width: 1250px; margin: auto; }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; background: #eef2f7; padding: 20px; border-radius: 8px; }
+        input, button { padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; }
+        button { background: var(--gov-blue); color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #002244; }
+        .status-pill { padding: 8px 15px; border-radius: 20px; font-size: 12px; margin-bottom: 15px; display: inline-block; font-weight: bold; }
+        .loading { background: #fff3cd; color: #856404; }
+        .ready { background: #d4edda; color: #155724; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+        th { background: var(--gov-blue); color: white; padding: 12px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f8f9fa; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>📊 Monitor de Resultados PNCP</h2>
-    <div id="status"></div>
+    <h2>🔍 Consulta Especialista PNCP (UASG / CNPJ / Licitação)</h2>
+    <div id="status" class="status-pill ready">Pronto para pesquisar</div>
 
-    <div class="filters">
-        <input type="date" id="dataIni" value="2025-01-01">
-        <input type="date" id="dataFim" value="2025-01-05">
-        <input type="text" id="orgao" placeholder="Código do Órgão">
-        <button id="btn" onclick="buscar()">Pesquisar na API</button>
+    <div class="filter-grid">
+        <div style="display:flex;flex-direction:column">
+            <label style="font-size:10px;font-weight:bold">DATA INICIAL</label>
+            <input type="date" id="dataIni" value="2025-01-01">
+        </div>
+        <div style="display:flex;flex-direction:column">
+            <label style="font-size:10px;font-weight:bold">DATA FINAL</label>
+            <input type="date" id="dataFim" value="2025-01-10">
+        </div>
+        <input type="text" id="uasg" placeholder="Código UASG (Ex: 926150)">
+        <input type="text" id="cnpj" placeholder="CNPJ Vencedor">
+        <input type="text" id="licitacao" placeholder="Nº Licitação (Ex: 102024)">
+        <button onclick="pesquisaProfunda()">BUSCAR DADOS</button>
     </div>
 
-    <table>
+    <table id="tabelaRes">
         <thead>
             <tr>
-                <th>ID Contratação</th>
-                <th>Fornecedor (CNPJ)</th>
-                <th>Descrição do Item</th>
-                <th>Valor Total</th>
+                <th>UASG</th>
+                <th>Licitação</th>
+                <th>Fornecedor (CNPJ/Nome)</th>
+                <th>Item / Descrição</th>
+                <th>Total Homologado</th>
             </tr>
         </thead>
-        <tbody id="tabelaBody">
-            <tr><td colspan="4" style="text-align:center;">Selecione um período curto para testar.</td></tr>
+        <tbody id="corpoTabela">
+            <tr><td colspan="5" style="text-align:center;padding:30px;color:#777">Preencha os filtros para carregar os dados do governo.</td></tr>
         </tbody>
     </table>
 </div>
 
 <script>
-async function buscar() {
-    const btn = document.getElementById('btn');
+async function pesquisaProfunda() {
     const status = document.getElementById('status');
-    const corpo = document.getElementById('tabelaBody');
-    
-    const d1 = document.getElementById('dataIni').value;
-    const d2 = document.getElementById('dataFim').value;
-    const orgao = document.getElementById('orgao').value.trim();
+    const corpo = document.getElementById('corpoTabela');
+    const btn = document.querySelector('button');
 
+    // Captura de valores
+    const dIni = document.getElementById('dataIni').value;
+    const dFim = document.getElementById('dataFim').value;
+    const uasg = document.getElementById('uasg').value.trim();
+    const cnpj = document.getElementById('cnpj').value.replace(/\D/g, "");
+    const licitacao = document.getElementById('licitacao').value.trim();
+
+    // Interface
+    status.className = "status-pill loading";
+    status.innerText = "⏳ Acessando Servidores do Governo... Aguarde.";
     btn.disabled = true;
-    status.className = "alert info";
-    status.innerHTML = "⏳ Conectando... O Governo pode levar até 30 segundos para responder.";
-    corpo.innerHTML = "";
 
-    // Endpoint 7 - Módulo 10.7 (Resultados)
-    let url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=50&dataPublicacaoPncpInicial=${d1}&dataPublicacaoPncpFinal=${d2}`;
-    if (orgao) url += `&codigoOrgao=${orgao}`;
+    // URL para o Módulo 7 (Resultados de Itens de Contratações)
+    // Conforme dados.gov.br: dataPublicacaoPncpInicial é obrigatório
+    let url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=100&dataPublicacaoPncpInicial=${dIni}&dataPublicacaoPncpFinal=${dFim}`;
+    
+    // Adição de filtro de UASG (Código do Órgão)
+    if (uasg) url += `&codigoOrgao=${uasg}`;
+
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
 
     try {
-        const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
         const response = await fetch(proxy);
-        const wrapper = await response.json();
-        
-        if (!wrapper.contents) throw new Error("Resposta vazia");
-        
-        const data = JSON.parse(wrapper.contents);
-        const lista = data.resultado || [];
+        const json = await response.json();
+        const data = JSON.parse(json.contents);
+        let resultados = data.resultado || [];
 
-        if (lista.length === 0) {
-            status.className = "alert error";
-            status.innerHTML = "⚠️ API respondeu, mas não há dados para este filtro.";
-            corpo.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Nenhum dado encontrado.</td></tr>";
+        // Filtro adicional por CNPJ e Nº de Licitação (Processamento em memória para maior precisão)
+        if (cnpj) {
+            resultados = resultados.filter(i => (i.niFornecedor || "").includes(cnpj));
+        }
+        if (licitacao) {
+            resultados = resultados.filter(i => (i.numeroCompra || "").includes(licitacao) || (i.idContratacaoPNCP || "").includes(licitacao));
+        }
+
+        if (resultados.length === 0) {
+            corpo.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum resultado encontrado no portal para esses critérios.</td></tr>';
+            status.className = "status-pill loading";
+            status.innerText = "⚠️ Sem registros.";
         } else {
-            status.innerHTML = `✅ ${lista.length} itens carregados com sucesso!`;
-            lista.forEach(item => {
-                // Prevenção de erro para campos nulos
-                const id = item.idContratacaoPNCP || 'N/A';
-                const cnpj = item.niFornecedor || item.niFornecedorVencedor || 'N/A';
-                const desc = item.descricaoItem || 'Sem descrição';
-                const valorRaw = item.valorTotalHomologado || item.valorEstimado || 0;
-                const valorFormatado = valorRaw.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-
+            corpo.innerHTML = "";
+            resultados.forEach(item => {
+                const valor = item.valorTotalHomologado ? item.valorTotalHomologado.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : "R$ 0,00";
                 corpo.innerHTML += `
                     <tr>
-                        <td><strong>${id}</strong></td>
-                        <td>${cnpj}<br><small>${item.nomeRazaoSocialFornecedor || ''}</small></td>
-                        <td>${desc}</td>
-                        <td>${valorFormatado}</td>
+                        <td><span style="color:#003366;font-weight:bold">${item.codigoOrgao || 'N/A'}</span></td>
+                        <td>${item.numeroCompra || item.idContratacaoPNCP.split('-')[2]}</td>
+                        <td><strong>${item.niFornecedor || 'N/A'}</strong><br><small>${item.nomeRazaoSocialFornecedor || ''}</small></td>
+                        <td>${item.descricaoItem || 'Sem descrição'}</td>
+                        <td style="color:var(--accent);font-weight:bold">${valor}</td>
                     </tr>`;
             });
+            status.className = "status-pill ready";
+            status.innerText = `✅ Sucesso: ${resultados.length} registros encontrados.`;
         }
-    } catch (err) {
-        status.className = "alert error";
-        status.innerHTML = "❌ Erro de Conexão. O servidor do governo está sobrecarregado. Tente um intervalo de apenas 2 dias.";
-        console.error(err);
+    } catch (e) {
+        status.innerText = "❌ Erro: O servidor do governo demorou a responder.";
+        console.error(e);
     } finally {
         btn.disabled = false;
     }
