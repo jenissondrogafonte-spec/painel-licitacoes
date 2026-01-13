@@ -22,7 +22,7 @@
             const uasg = document.getElementById('uasg').value;
             const objeto = document.getElementById('objeto').value;
             const params = new URLSearchParams({ uasg, objeto }).toString();
-            const url = `http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?${params}`;
+            const url = `https://api.allorigins.win/raw?url=${encodeURIComponent('http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?' + params)}`;
             try {
                 const response = await fetch(url);
                 const data = await response.json();
