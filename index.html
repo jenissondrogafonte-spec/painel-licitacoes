@@ -5,40 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Licitações ComprasNet</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
-        form { background: #f4f4f4; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        label { display: block; margin-bottom: 10px; font-weight: bold; }
-        input { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
-        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #0056b3; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background: #007bff; color: white; }
-        tr:nth-child(even) { background: #f9f9f9; }
-        #tabela-resultados { display: none; }
-        .loading { text-align: center; padding: 20px; }
-    </style>
-</head>
-<body>
-    <h1>Consulta de Licitações ComprasNet</h1>
-    <form id="form-busca">
-        <label>UASG (ex: 389144): <input type="number" id="uasg" placeholder="Digite o código UASG"></label>
-        <label>Objeto (ex: medicamento): <input type="text" id="objeto" placeholder="Palavras-chave do objeto"></label>
-        <button type="submit">Buscar Licitações</button>
-    </form>
-    <div id="loading" class="loading" style="display:none;">Carregando...</div>
-    <table id="tabela-resultados">
-        <thead>
-            <tr>
-                <th>Nº Aviso</th>
-                <th>Objeto</th>
-                <th>UASG</th>
-                <th>Data Publicação</th>
-                <th>Modalidade</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-
-    <script>
-        document.getElementById('form-busca').addEventListener('submit', async (e
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f8f9fa; }
+        h1 { color: #007bff; text-align: center; }
+        form { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        label { display: block; margin-bottom: 12px; font-weight: bold; color: #333; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        button { background: #28a745; color: white; padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 10px; }
+        button:hover { background: #218838; }
+        table { border-collapse: collapse; width: 100%; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); dis
