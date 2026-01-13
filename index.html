@@ -5,16 +5,19 @@ const uasg=document.getElementById('uasg').value;
 const datai=document.getElementById('datai').value;
 const dataf=document.getElementById('dataf').value;
 const url=`https://dadosabertos.compras.gov.br/api/v1/licitacoes?uasg=${uasg}&data_publicacao_min=${datai}&data_publicacao_max=${dataf}&limit=20`;
-document.getElementById('resultado').innerHTML='<p>Carregando...</p>';
+document.getElementById('resultado').innerHTML='<p>🔄 Carregando...</p>';
 try{
 const r=await fetch(url);
 const d=await r.json();
-let html='<table><tr><th>Nº</th><th>UASG</th><th>Data</th><th>Objeto</th></tr>';
-if(d.resultado&&d.resultado.length){
-d.resultado.forEach((l,i)=>html+=`<tr><td>${l.numero_aviso}</td><td>${l.uasg}</td><td>${l.data_publicacao}</td><td>${l.objeto?.slice(0,80)}</td></tr>`);
-}else html+='<tr><td colspan=4>0 resultados UASG '+uasg+'</td></tr>';
+let html='<table><tr><th>Nº Aviso</th><th>UASG</th><th>Data</th><th>Objeto</th></tr>';
+if(d.resultado&&d.resultado.length>0){
+d.resultado.slice(0,20).forEach(l=>html+=`<tr><td>${l.numero_aviso||'N/A'}</td><td>${l.uasg||'N/A'}</td><td>${l.data_publicacao||'N/A'}</td><td>${(l.objeto||'').slice(0,80)||'N/A'}</td></tr>`);
+html=`<p>✅ ${d.resultado.length} resultados</p>`+html;
+}else html+='<tr><td colspan=4 style="color:red">0 resultados para UASG '+uasg+'</td></tr>';
 html+='</table>';
 document.getElementById('resultado').innerHTML=html;
-}catch(e){document.getElementById('resultado').innerHTML='<p>Erro: '+e+'<br>Teste: <a href="https://dadosabertos.compras.gov.br/api/v1/licitacoes?uasg=926150" target="_blank">API direta</a></p>';}
+}catch(e){
+document.getElementById('resultado').innerHTML='<p style="color:red">❌ Erro: '+e+'<br><a href="https://dadosabertos.compras.gov.br/swagger-ui/index.html" target="_blank">Veja docs API</a></p>';
+}
 }
 </script>
