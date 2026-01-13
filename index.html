@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Teste Licitações</title>
+<style>body{font-family:sans-serif;padding:20px;max-width:1000px;margin:auto}input,button{padding:12px;font-size:16px;width:100%;margin:5px 0;border-radius:5px;border:1px solid #ccc}button{background:#007cba;color:white;border:none;cursor:pointer}</style>
+</head>
+<body>
+<h1>🧪 Teste Rápido Licitações</h1>
+<form>
+<input placeholder="Digite UASG (926150)" id="u">
+<button onclick="buscar()">Buscar</button>
+</form>
+<div id="out">Clique Buscar para testar API</div>
+
+<script>
+function buscar(){
+const u=document.getElementById('u').value||'926150';
+document.getElementById('out').innerHTML='Testando UASG '+u+'...';
+fetch('https://api.allorigins.win/get?url=http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?uasg='+u+'&limit=5')
+.then(r=>r.json())
+.then(d=>JSON.parse(d.contents))
+.then(data=>{
+if(data.resultado&&data.resultado.length){
+let t='<h3>✅ '+data.resultado.length+' resultados:</h3><table border=1><tr><th>Nº</th><th>UASG</th><th>Data</th><th>Objeto</th></tr>';
+data.resultado.slice(0,5).forEach(l=>t+='<tr><td>'+l.numero_aviso+'</td><td>'+l.uasg+'</td><td>'+l.data_publicacao+'</td><td>'+l.objeto.slice(0,50)+'</td></tr>');
+document.getElementById('out').innerHTML=t+'</table>';
+}else document.getElementById('out').innerHTML='❌ 0 resultados UASG '+u;
+}).catch(e=>document.getElementById('out').innerHTML='❌ Erro: '+e);
+}
+</script>
+</body>
+</html>
