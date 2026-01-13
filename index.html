@@ -1,39 +1,65 @@
 <script>
 async function buscarDados() {
-    const d1 = document.getElementById('dataIni').value;
+    const d1 = document.getElementById('dataIni').value; // Formato AAAA-MM-DD
     const d2 = document.getElementById('dataFim').value;
+    const corpoTabela = document.getElementById('corpoTabela');
     
-    // URL EXATA do Módulo 10.7 (Pág. 97 do Manual / Documentação Postman)
+    if (!d1 || !d2) {
+        alert("Por favor, selecione as datas inicial e final.");
+        return;
+    }
+
+    corpoTabela.innerHTML = "<tr><td colspan='4' style='text-align:center;'>⏳ Consultando base de dados do Governo...</td></tr>";
+
+    // Endpoint oficial do Módulo 10.7 conforme dados.gov.br
     const urlBase = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarResultadoItensContratacoes_PNCP_14133`;
+    // Parâmetros obrigatórios: dataPublicacaoPncpInicial e dataPublicacaoPncpFinal
     const params = `?pagina=1&tamanhoPagina=50&dataPublicacaoPncpInicial=${d1}&dataPublicacaoPncpFinal=${d2}`;
     
     try {
+        // Uso do proxy para evitar erro de CORS
         const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(urlBase + params)}`);
+        
+        if (!response.ok) throw new Error("Erro na resposta do servidor.");
+        
         const wrapper = await response.json();
+        
+        if (!wrapper.contents) throw new Error("Conteúdo não encontrado.");
+        
         const data = JSON.parse(wrapper.contents);
 
-        // CORREÇÃO CRÍTICA: Acessar a chave 'resultado' conforme a documentação
+        // Acessando a chave 'resultado' (obrigatório no PNCP)
         const lista = data.resultado || [];
 
         if (lista.length === 0) {
-            alert("API conectada, mas nenhum dado encontrado para este período.");
+            corpoTabela.innerHTML = "<tr><td colspan='4' style='text-align:center;'>⚠️ Nenhum dado encontrado para este período.</td></tr>";
             return;
         }
 
-        // Desenhar tabela com os campos exatos do Postman
         let html = "";
         lista.forEach(item => {
+            // Tratamento de valores nulos para evitar que o script pare
+            const id = item.idContratacaoPNCP || "N/A";
+            const cnpj = item.niFornecedor || "N/A";
+            const nome = item.nomeRazaoSocialFornecedor || "Não informado";
+            const descricao = item.descricaoItem || "Sem descrição";
+            const valor = item.valorTotalHomologado 
+                ? item.valorTotalHomologado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
+                : "R$ 0,00";
+
             html += `<tr>
-                <td>${item.idContratacaoPNCP}</td>
-                <td>${item.niFornecedor}<br><small>${item.nomeRazaoSocialFornecedor}</small></td>
-                <td>${item.descricaoItem}</td>
-                <td>R$ ${item.valorTotalHomologado.toLocaleString('pt-BR')}</td>
+                <td><strong>${id}</strong></td>
+                <td>${cnpj}<br><small style="color: #666;">${nome}</small></td>
+                <td>${descricao}</td>
+                <td style="white-space: nowrap;">${valor}</td>
             </tr>`;
         });
-        document.getElementById('corpoTabela').innerHTML = html;
+        
+        corpoTabela.innerHTML = html;
 
     } catch (e) {
-        console.error("Falha ao ler documentação:", e);
+        console.error("Erro na busca:", e);
+        corpoTabela.innerHTML = `<tr><td colspan='4' style='text-align:center; color:red;'>❌ Falha na conexão: ${e.message}</td></tr>`;
     }
 }
 </script>
