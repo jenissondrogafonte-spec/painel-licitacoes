@@ -2,66 +2,90 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width">
-<title>Licitações ComprasNet - Funciona!</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Licitações + Vencedores - ComprasNet PE</title>
 <style>
-body{font-family:Arial,sans-serif;max-width:1200px;margin:auto;padding:20px;background:#f0f2f5}
-h1{color:#1d4ed8;font-size:2.5em;text-align:center}
-.card{background:white;padding:30px;border-radius:15px;box-shadow:0 8px 32px rgba(0,0,0,0.1);margin:20px 0}
-input,button{padding:15px;font-size:18px;width:100%;border-radius:10px;border:2px solid #e5e7eb;margin:10px 0;box-sizing:border-box}
-input:focus{border-color:#1d4ed8;outline:none}
-button{background:#059669;color:white;border:none;cursor:pointer;font-weight:bold}
-button:hover{background:#047857}
-.api-link{background:#fef3c7;padding:20px;border-radius:10px;border-left:6px solid #f59e0b;margin:20px 0}
-.api-link a{color:#b45309;font-weight:bold;font-size:16px;text-decoration:none}
-table{width:100%;border-collapse:collapse;margin:20px 0;background:white;border-radius:10px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
-th{background:#1d4ed8;color:white;padding:15px;font-weight:bold}
-td{padding:12px;border-bottom:1px solid #f3f4f6}
-tr:nth-child(even){background:#f9fafb}
+body{font-family:system-ui,-apple-system,sans-serif;max-width:1300px;margin:0 auto;padding:20px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)}
+h1{color:white;text-align:center;font-size:2.5em;margin-bottom:20px;text-shadow:0 2px 10px rgba(0,0,0,0.3)}
+.card{background:white;border-radius:20px;padding:30px;margin:20px 0;box-shadow:0 20px 40px rgba(0,0,0,0.1)}
+.tabs{display:flex;background:#f8fafc;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+.tab-btn{flex:1;padding:15px 20px;background:none;border:none;cursor:pointer;font-weight:600;transition:all 0.3s;font-size:16px}
+.tab-btn.active{background:#3b82f6;color:white}
+.tab-content{display:none;padding:20px;background:white;border-radius:0 0 20px 20px}
+.tab-content.active{display:block}
+input,select,button{width:100%;padding:15px;border-radius:12px;border:2px solid #e5e7eb;font-size:16px;margin:10px 0;box-sizing:border-box}
+input:focus,select:focus{border-color:#3b82f6;outline:none;box-shadow:0 0 0 3px rgba(59,130,246,0.1)}
+button{background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;font-weight:700;cursor:pointer;font-size:16px;transition:all 0.3s}
+button:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(16,185,129,0.4)}
+table{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;background:white;box-shadow:0 4px 12px rgba(0,0,0,0.1);margin:20px 0}
+th{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:white;padding:18px;font-weight:600;text-align:left}
+td{padding:15px;border-bottom:1px solid #f1f5f9}
+tr:nth-child(even){background:#f8fafc}
 tr:hover{background:#eff6ff}
-@media(max-width:768px){body{padding:10px}}
+.total{font-size:24px;font-weight:bold;color:#059669;text-align:center;background:#ecfdf5;padding:20px;border-radius:12px;margin:20px 0}
+.loading{text-align:center;padding:40px;font-size:18px;color:#6b7280}
+.error{background:#fee2e2;border-left:6px solid #ef4444;color:#991b1b;padding:20px;border-radius:12px;margin:20px 0}
+.success{background:#d1fae5;border-left:6px solid #10b981;color:#065f46;padding:20px;border-radius:12px;margin:20px 0}
+@media(max-width:768px){.tabs{flex-direction:column}body{padding:10px}}
 </style>
 </head>
 <body>
-<h1>✅ Painel Licitações ComprasNet PE</h1>
+<h1>📊 Painel Completo Licitações + Vencedores - ComprasNet PE</h1>
 
 <div class="card">
-<h2>🎯 Busca Rápida</h2>
-<input id="uasg" value="926150" placeholder="UASG">
-<button onclick="gerarLink()">🔗 Gerar Link API</button>
-<div id="linkapi" class="api-link" style="display:none">
-<strong>🔗 Copie e abra este link:</strong><br>
-<a id="linkgerado" href="#" target="_blank">Clique para ver licitações</a>
-</div>
-</div>
-
-<div class="card">
-<h2>📋 Exemplos Testados</h2>
-<a href="http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?uasg=926150&limit=20" target="_blank" class="api-link">
-<strong>SEAD-PE (926150)</strong> - 20 licitações recentes
-</a>
-<a href="http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?uasg=389144&limit=20" target="_blank" class="api-link">
-<strong>Saúde Federal (389144)</strong> - Teste com muitos dados
-</a>
-<a href="http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?uasg=925229&limit=20" target="_blank" class="api-link">
-<strong>Saúde PE Federal (925229)</strong> - Pernambuco
-</a>
+<h2>🔍 Buscar Licitações</h2>
+<form id="buscaForm">
+<input id="uasg" type="number" value="926150" placeholder="UASG (926150=SEAD-PE)">
+<input id="numeroLic" type="text" placeholder="Nº Licitação (opcional)">
+<input id="dataIni" type="date" value="2025-01-01">
+<input id="dataFim" type="date" value="2026-01-13">
+<button type="submit">🚀 Buscar Licitações</button>
+</form>
 </div>
 
-<div class="card">
-<h2>📊 Últimas Licitações SEAD-PE</h2>
-<iframe src="http://compras.dados.gov.br/licitacoes/v1/licitacoes.html?uasg=926150" width="100%" height="600" style="border:none;border-radius:10px"></iframe>
+<div class="tabs">
+<button class="tab-btn active" onclick="showTab('licitacoes')">📋 Licitações (50)</button>
+<button class="tab-btn" onclick="showTab('vencedores')">👥 Vencedores/Itens</button>
+<button class="tab-btn" onclick="showTab('total')">💰 Totais Fornecedor</button>
+</div>
+
+<div id="licitacoes" class="tab-content active">
+<div id="loading" class="loading" style="display:none">⏳ Carregando licitações...</div>
+<div id="licitacoesTable"></div>
+</div>
+
+<div id="vencedores" class="tab-content">
+<div id="vencedoresLoading" class="loading" style="display:none">⏳ Carregando vencedores...</div>
+<input id="numeroItem" placeholder="Digite Nº Licitação da lista acima">
+<button onclick="buscarVencedores()">👁️ Ver Vencedores/Itens</button>
+<div id="vencedoresTable"></div>
+</div>
+
+<div id="total" class="tab-content">
+<div id="totalLoading" class="loading" style="display:none">⏳ Calculando totais...</div>
+<select id="fornecedorSelect">
+<option>Selecione fornecedor da lista</option>
+</select>
+<button onclick="calcularTotal()">💰 Ver Total Fornecedor</button>
+<div id="totalTable"></div>
 </div>
 
 <script>
-function gerarLink(){
-const uasg=document.getElementById('uasg').value;
-const link='http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?uasg='+uasg+'&limit=50';
-document.getElementById('linkgerado').href=link;
-document.getElementById('linkgerado').textContent=link;
-document.getElementById('linkapi').style.display='block';
-document.getElementById('linkapi').scrollIntoView();
+let licitacoesData = [];
+let itensData = [];
+
+function showTab(tab) {
+document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+document.getElementById(tab).classList.add('active');
+event.target.classList.add('active');
 }
-</script>
-</body>
-</html>
+
+document.getElementById('buscaForm').addEventListener('submit', async e => {
+e.preventDefault();
+const uasg = document.getElementById('uasg').value;
+const numero = document.getElementById('numeroLic').value;
+const datai = document.getElementById('dataIni').value;
+const dataf = document.getElementById('dataFim').value;
+
+const params
