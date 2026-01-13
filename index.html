@@ -2,31 +2,32 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel PNCP - Ajuste Swagger</title>
+    <title>Painel PNCP - Conforme Swagger</title>
     <style>
-        :root { --blue: #003366; --bg: #f1f5f9; }
-        body { font-family: sans-serif; background: var(--bg); padding: 20px; }
-        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
-        .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; background: #e2e8f0; padding: 15px; border-radius: 8px; }
-        input, button { padding: 10px; border-radius: 4px; border: 1px solid #cbd5e1; }
-        button { background: var(--blue); color: white; cursor: pointer; font-weight: bold; border: none; }
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th { background: var(--blue); color: white; padding: 12px; text-align: left; font-size: 13px; }
-        td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 12px; }
-        .loader { display: none; color: #1e40af; font-weight: bold; margin-bottom: 10px; }
+        :root { --blue: #003366; --bg: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
+        .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; background: #eef2f7; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        input, button { padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+        button { background: var(--blue); color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:disabled { background: #94a3b8; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: var(--blue); color: white; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .loader { color: #003366; font-weight: bold; display: none; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>🔍 Consulta PNCP (Conforme Swagger Mar/25)</h2>
-    <div id="loader" class="loader">⏳ Processando dados do Swagger...</div>
+<div class="card">
+    <h2>📋 Consulta PNCP (Filtros Swagger)</h2>
+    <div id="loader" class="loader">⏳ Consultando API do Governo... Aguarde.</div>
 
     <div class="filters">
         <input type="date" id="dataIni" value="2025-01-01">
         <input type="date" id="dataFim" value="2025-01-10">
-        <input type="text" id="orgao" placeholder="Cód. Órgão (Só números)">
-        <button onclick="buscarNoSwagger()">Consultar</button>
+        <input type="text" id="orgao" placeholder="Código Órgão (Ex: 926150)">
+        <button id="btn" onclick="buscar()">Pesquisar</button>
     </div>
 
     <table>
@@ -34,47 +35,51 @@
             <tr>
                 <th>ID Contratação</th>
                 <th>Fornecedor (CNPJ)</th>
-                <th>Descrição do Item</th>
+                <th>Item / Descrição</th>
                 <th>Valor Total</th>
             </tr>
         </thead>
-        <tbody id="tabelaBody">
-            <tr><td colspan="4" style="text-align:center;">Aguardando busca...</td></tr>
+        <tbody id="tabelaCorpo">
+            <tr><td colspan="4" style="text-align:center;">Nenhum dado carregado.</td></tr>
         </tbody>
     </table>
 </div>
 
 <script>
-async function buscarNoSwagger() {
+async function buscar() {
+    const btn = document.getElementById('btn');
     const loader = document.getElementById('loader');
-    const corpo = document.getElementById('tabelaBody');
+    const corpo = document.getElementById('tabelaCorpo');
+    
+    // Nomes dos parâmetros ajustados conforme Swagger
     const d1 = document.getElementById('dataIni').value;
     const d2 = document.getElementById('dataFim').value;
     const orgao = document.getElementById('orgao').value.trim();
 
+    btn.disabled = true;
     loader.style.display = "block";
     corpo.innerHTML = "";
 
-    // Endpoint 7 conforme verificado no Swagger-UI
+    // Endpoint exato do Swagger - Módulo 10, Serviço 7
     let url = `https://dadosabertos.compras.gov.br/modulo-contratacoes/7_consultarResultadoItensContratacoes_PNCP_14133?pagina=1&tamanhoPagina=50&dataPublicacaoPncpInicial=${d1}&dataPublicacaoPncpFinal=${d2}`;
+    
     if (orgao) url += `&codigoOrgao=${orgao}`;
 
     try {
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-        const response = await fetch(proxyUrl);
+        // Uso do Proxy AllOrigins para evitar bloqueio CORS
+        const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+        const response = await fetch(proxy);
         const wrapper = await response.json();
         
-        // Desembrulhando o JSON do Proxy e o JSON do Governo
+        // Desembrulhando o JSON (Proxy -> Conteúdo -> Objeto)
         const data = JSON.parse(wrapper.contents);
         const lista = data.resultado || [];
 
         if (lista.length === 0) {
-            corpo.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Nenhum dado encontrado no Swagger para este período.</td></tr>";
+            corpo.innerHTML = "<tr><td colspan='4' style='text-align:center;'>Nenhum resultado encontrado no Swagger para estas datas.</td></tr>";
         } else {
             lista.forEach(item => {
-                // Nomes de campos validados no Swagger: niFornecedor e valorTotalHomologado
                 const valor = item.valorTotalHomologado ? item.valorTotalHomologado.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}) : "R$ 0,00";
-                
                 corpo.innerHTML += `
                     <tr>
                         <td><strong>${item.idContratacaoPNCP || 'N/A'}</strong></td>
@@ -84,10 +89,11 @@ async function buscarNoSwagger() {
                     </tr>`;
             });
         }
-    } catch (err) {
-        corpo.innerHTML = "<tr><td colspan='4' style='text-align:center; color:red;'>Erro ao processar JSON. Verifique o console.</td></tr>";
-        console.error("Erro técnico:", err);
+    } catch (e) {
+        corpo.innerHTML = "<tr><td colspan='4' style='text-align:center; color:red;'>Erro ao concluir a busca. O servidor do Governo pode estar lento.</td></tr>";
+        console.error(e);
     } finally {
+        btn.disabled = false;
         loader.style.display = "none";
     }
 }
