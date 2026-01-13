@@ -24,4 +24,17 @@ tr:hover{background:#f8f9fa}
 <h1>🔍 Painel Licitações ComprasNet - PE/Recife</h1>
 <form id="form-busca">
 <label>🆔 UASG (926150=SEAD-PE):</label><input type="number" id="uasg" value="926150" placeholder="926150">
-<label>📝 Nº Licitação:</label><input type="text" id="numero" placeho
+<label>📝 Nº Licitação:</label><input type="text" id="numero" placeholder="ex: 901402">
+<label>📅 Data Início:</label><input type="date" id="data_min" value="2025-01-01">
+<label>📅 Data Fim:</label><input type="date" id="data_max" value="2026-01-13">
+<button type="submit">🚀 Buscar</button>
+</form>
+<div id="loading" class="loading">⏳ Carregando...</div>
+<div id="info" class="info"></div>
+<table id="tabela-resultados"><thead><tr><th>Nº Aviso</th><th>UASG</th><th>Data</th><th>Modalidade</th><th>Objeto</th></tr></thead><tbody></tbody></table>
+
+<script>
+document.getElementById('form-busca').addEventListener('submit',async e=>{e.preventDefault();const uasg=document.getElementById('uasg').value.trim(),numero=document.getElementById('numero').value.trim(),data_min=document.getElementById('data_min').value,data_max=document.getElementById('data_max').value;if(!uasg&&!numero&&!data_min&&!data_max){alert('Informe filtro!');return}const params=new URLSearchParams({limit:'100'});uasg&&params.append('uasg',uasg),numero&&params.append('numero_aviso',numero),data_min&&params.append('data_publicacao_min',data_min),data_max&&params.append('data_publicacao_max',data_max);const apiUrl=`http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?${params}`,proxyUrl=`https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,loadingEl=document.getElementById('loading'),tableEl=document.getElementById('tabela-resultados'),infoEl=document.getElementById('info');loadingEl.style.display='block',tableEl.style.display='none',infoEl.style.display='none';try{const res=await fetch(proxyUrl);if(!res.ok)throw new Error('API falhou');const data=await res.json();loadingEl.style.display='none';if(!data.resultado||data.resultado.length===0){infoEl.innerHTML=`❌ 0 resultados<br>🔗 <a href="${apiUrl}" target="_blank">Teste URL direta</a>`;infoEl.style.display='block';return}infoEl.innerHTML=`✅ ${data.resultado.length} licitação(ões) encontradas`;infoEl.style.display='block';const tbody=tableEl.querySelector('tbody');tbody.innerHTML='';data.resultado.slice(0,20).forEach(lic=>{const row=document.createElement('tr');row.innerHTML=`<td>${lic.numero_aviso||'-'}</td><td>${lic.uasg||'-'}</td><td>${lic.data_publicacao||'-'}</td><td>${lic.modalidade||'-'}</td><td>${(lic.objeto||'').substring(0,60)||'-'}</td>`;tbody.appendChild(row)});tableEl.style.display='table'}catch(err){loadingEl.style.display='none';infoEl.innerHTML=`❌ Erro: ${err.message}<br>Teste: UASG 926150 + Data 2025-01-01`;infoEl.style.display='block'}});
+</script>
+</body>
+</html>
