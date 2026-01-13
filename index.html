@@ -1,51 +1,27 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Licitações ComprasNet</title>
-    <style>/* Mesmo CSS anterior mantido */</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Licitações - ComprasNet PE</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:1200px;margin:0 auto;padding:20px;background:#f8f9fa}
+h1{color:#007bff;text-align:center}
+form{background:white;padding:25px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.1);margin-bottom:20px}
+label{display:block;margin-bottom:12px;font-weight:bold;color:#333}
+input{width:100%;padding:12px;border:1px solid #ddd;border-radius:5px;box-sizing:border-box;font-size:16px;margin-bottom:10px}
+button{background:#28a745;color:white;padding:12px 30px;border:none;border-radius:5px;cursor:pointer;font-size:16px;width:100%;margin-top:10px}
+button:hover{background:#218838}
+table{border-collapse:collapse;width:100%;background:white;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.1);display:none;margin-top:20px}
+th{background:#007bff;color:white;padding:15px;text-align:left;font-weight:bold}
+td{padding:12px 15px;border-bottom:1px solid #eee}
+tr:hover{background:#f8f9fa}
+.loading{text-align:center;padding:30px;background:white;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.1);display:none}
+.info{background:#d4edda;padding:15px;border-radius:5px;margin-top:20px;font-size:14px;display:none}
+</style>
 </head>
 <body>
-    <h1>🔍 Painel Licitações ComprasNet - PE</h1>
-    <form id="form-busca">
-        <label>🆔 UASG (ex: 926150 SEAD-PE):</label>
-        <input type="number" id="uasg" placeholder="926150">
-        
-        <label>📝 Nº Licitação (ex: 901402):</label>
-        <input type="text" id="numero" placeholder="Número aviso">
-        
-        <label>📅 Data Início (YYYY-MM-DD):</label>
-        <input type="date" id="data_min" max="2026-01-13">
-        
-        <label>📅 Data Fim (YYYY-MM-DD):</label>
-        <input type="date" id="data_max" min="2024-01-01" max="2026-01-13" value="2026-01-13">
-        
-        <button type="submit">🚀 Buscar Licitações</button>
-    </form>
-    
-    <!-- loading, info, table iguais -->
-    
-    <script>
-        document.getElementById('form-busca').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const uasg = document.getElementById('uasg').value.trim();
-            const numero = document.getElementById('numero').value.trim();
-            const data_min = document.getElementById('data_min').value;
-            const data_max = document.getElementById('data_max').value;
-            
-            const params = new URLSearchParams({ limit: '100' });
-            if (uasg) params.append('uasg', uasg);
-            if (numero) params.append('numero_aviso', numero);
-            if (data_min) params.append('data_publicacao_min', data_min);
-            if (data_max) params.append('data_publicacao_max', data_max);
-            
-            const apiUrl = `http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?${params}`;
-            
-            // resto igual: proxy, loading, tabela...
-            // [Script completo igual anterior, só troca campos]
-        });
-    </script>
-</body>
-</html>
+<h1>🔍 Painel Licitações ComprasNet - PE/Recife</h1>
+<form id="form-busca">
+<label>🆔 UASG (926150=SEAD-PE):</label><input type="number" id="uasg" value="926150" placeholder="926150">
+<label>📝 Nº Licitação:</label><input type="text" id="numero" placeho
