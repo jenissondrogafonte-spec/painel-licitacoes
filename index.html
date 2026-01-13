@@ -1,43 +1,44 @@
-<script>
-document.getElementById('form-busca').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const uasg = document.getElementById('uasg').value.trim();
-    const objeto = document.getElementById('objeto').value.trim();
-    if (!uasg && !objeto) {
-        alert('Informe UASG ou objeto!');
-        return;
-    }
-    const params = new URLSearchParams();
-    if (uasg) params.append('uasg', uasg);
-    if (objeto) params.append('objeto', objeto);
-    params.append('limit', '50'); // Limita resultados
-    const apiUrl = `http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?${params}`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
-    const tabela = document.getElementById('tabela-resultados');
-    try {
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        if (!data.resultado || data.resultado.length === 0) {
-            alert('Nenhum resultado encontrado.');
-            return;
-        }
-        const tbody = tabela.querySelector('tbody');
-        tbody.innerHTML = '';
-        data.resultado.slice(0, 20).forEach(lic => { // Primeiros 20
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${lic.numero_aviso || ''}</td>
-                <td>${lic.objeto || ''}</td>
-                <td>${lic.uasg || ''}</td>
-                <td>${lic.data_publicacao || ''}</td>
-            `;
-            tbody.appendChild(row);
-        });
-        tabela.style.display = 'table';
-    } catch (error) {
-        console.error(error);
-        alert(`Erro: ${error.message}. Tente UASG=389144.`);
-    }
-});
-</script>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Licitações ComprasNet</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        form { background: #f4f4f4; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        label { display: block; margin-bottom: 10px; font-weight: bold; }
+        input { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #007bff; color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        #tabela-resultados { display: none; }
+        .loading { text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Consulta de Licitações ComprasNet</h1>
+    <form id="form-busca">
+        <label>UASG (ex: 389144): <input type="number" id="uasg" placeholder="Digite o código UASG"></label>
+        <label>Objeto (ex: medicamento): <input type="text" id="objeto" placeholder="Palavras-chave do objeto"></label>
+        <button type="submit">Buscar Licitações</button>
+    </form>
+    <div id="loading" class="loading" style="display:none;">Carregando...</div>
+    <table id="tabela-resultados">
+        <thead>
+            <tr>
+                <th>Nº Aviso</th>
+                <th>Objeto</th>
+                <th>UASG</th>
+                <th>Data Publicação</th>
+                <th>Modalidade</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        document.getElementById('form-busca').addEventListener('submit', async (e
