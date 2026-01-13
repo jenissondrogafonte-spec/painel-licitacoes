@@ -1,23 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Licitações ComprasNet - PE/Recife</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;max-width:1200px;margin:0 auto;padding:20px;background:#f8f9fa;line-height:1.6}
+h1{color:#1a73e8;text-align:center;font-size:2em;margin-bottom:10px}
+form{background:#fff;padding:30px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);margin-bottom:20px}
+label{display:block;margin:15px 0 5px;font-weight:600;color:#333}
+input{width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:16px;box-sizing:border-box;transition:border-color 0.3s}
+input:focus{border-color:#1a73e8;outline:none;box-shadow:0 0 0 3px rgba(26,115,232,0.1)}
+button{width:100%;padding:15px;background:#1a73e8;color:white;border:none;border-radius:8px;font-size:18px;font-weight:600;cursor:pointer;transition:background 0.3s}
+button:hover{background:#1557b0}
+button:active{background:#1a73e8}
+table{width:100%;border-collapse:collapse;margin-top:20px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1);display:none}
+th{background:#1a73e8;color:white;padding:15px;font-weight:600;text-align:left}
+td{padding:12px 15px;border-bottom:1px solid #eee}
+tr:nth-child(even){background:#f8f9fa}
+tr:hover{background:#e3f2fd}
+#resultado{max-height:600px;overflow:auto}
+.loading{text-align:center;padding:40px;color:#666;font-size:18px;display:none}
+.info{background:#e8f5e8;padding:15px;border-radius:8px;margin:20px 0;border-left:4px solid #4caf50}
+.error{background:#ffebee;padding:15px;border-radius:8px;margin:20px 0;border-left:4px solid #f44336;color:#c62828}
+@media (max-width:768px){body{padding:10px}h1{font-size:1.5em}form{padding:20px}}
+</style>
+</head>
+<body>
+<h1>🔍 Painel de Licitações ComprasNet - Pernambuco</h1>
+<form id="busca">
+<label><strong>🆔 UASG</strong> (ex: 926150 SEAD-PE)</label>
+<input id="uasg" type="number" value="926150" placeholder="Digite UASG">
+
+<label><strong>📅 Data Início</strong> (YYYY-MM-DD)</label>
+<input id="datai" type="date" value="2025-01-01">
+
+<label><strong>📅 Data Fim</strong> (YYYY-MM-DD)</label>
+<input id="dataf" type="date" value="2026-01-13">
+
+<label><strong>🔢 Nº Licitação</strong> (opcional)</label>
+<input id="numero" type="text" placeholder="ex: 901402">
+
+<button type="submit">🚀 Buscar Licitações</button>
+</form>
+
+<div id="loading" class="loading">⏳ Carregando dados da API ComprasNet...</div>
+<div id="info" class="info" style="display:none;"></div>
+<div id="resultado"></div>
+
 <script>
-document.getElementById('busca').onsubmit=async(e)=>{
-e.preventDefault();
-const uasg=document.getElementById('uasg').value;
-const datai=document.getElementById('datai').value;
-const dataf=document.getElementById('dataf').value;
-const url=`https://dadosabertos.compras.gov.br/api/v1/licitacoes?uasg=${uasg}&data_publicacao_min=${datai}&data_publicacao_max=${dataf}&limit=20`;
-document.getElementById('resultado').innerHTML='<p>🔄 Carregando...</p>';
-try{
-const r=await fetch(url);
-const d=await r.json();
-let html='<table><tr><th>Nº Aviso</th><th>UASG</th><th>Data</th><th>Objeto</th></tr>';
-if(d.resultado&&d.resultado.length>0){
-d.resultado.slice(0,20).forEach(l=>html+=`<tr><td>${l.numero_aviso||'N/A'}</td><td>${l.uasg||'N/A'}</td><td>${l.data_publicacao||'N/A'}</td><td>${(l.objeto||'').slice(0,80)||'N/A'}</td></tr>`);
-html=`<p>✅ ${d.resultado.length} resultados</p>`+html;
-}else html+='<tr><td colspan=4 style="color:red">0 resultados para UASG '+uasg+'</td></tr>';
-html+='</table>';
-document.getElementById('resultado').innerHTML=html;
-}catch(e){
-document.getElementById('resultado').innerHTML='<p style="color:red">❌ Erro: '+e+'<br><a href="https://dadosabertos.compras.gov.br/swagger-ui/index.html" target="_blank">Veja docs API</a></p>';
-}
-}
+document.getElementById('busca').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const uasg = document.getElementById('uasg').value.trim();
+    const numero = document.getElementById('numero').value.trim();
+    const datai = document.getElementById('datai').value;
+    const dataf = document.getElementById('dataf').value;
+    
+    if (!uasg) {
+        alert('Informe a UASG!');
+        return;
+    }
+    
+    const params = new URLSearchParams({
+        uasg: uasg,
+        limit: '50'
+    });
+    if (numero) params.append('numero_aviso', numero);
+    if (datai) params.append('data_publicacao_min', datai);
+    if (dataf) params.append('data_publicacao_max', dataf);
+    
+    const apiUrl = `https://api.compras.dados.gov.br/licitacoes/v1/licitacoes.json?${params}`;
+    
+    const loadingEl = document.getElementById('loading');
+    const resultadoEl = document.getElementById('resultado');
+    const infoEl = document.getElementById('info');
+    
+    loadingEl.style.display = 'block';
+    infoEl.style.display = 'none';
+    resultadoEl.innerHTML = '';
+    
+    try {
+        // Tenta API direta primeiro
+        let response = await fetch(apiUrl);
+        let data = await response.json();
+        
+        // Se falhar CORS, tenta proxy
+        if (!response.ok || !data.resultado) {
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+            response = await fetch(proxyUrl);
+            data = await response.json();
+        }
+        
+        loadingEl.style.display = 'none';
+        
+        if (!data.resultado || data.resultado.length === 0) {
+            infoEl.innerHTML = `❌ Nenhum resultado para UASG <strong>${uasg}</strong><br>
+            <small>🔗 <a href="${apiUrl}" target="_blank">Teste URL direta</a></small>`;
+            infoEl.className = 'error';
+            infoEl.style.display = 'block';
+            return;
+        }
+        
+        infoEl.innerHTML = `✅ <strong>${data.resultado.length}</strong> licitação(ões) encontradas para UASG <strong>${uasg}</strong>`;
+        infoEl.className = 'info';
+        infoEl.style.display = 'block';
+        
+        let html = '<table><thead><tr><th>Nº Aviso</th><th>UASG</th><th>Data</th><th>Modalidade</th><th>Objeto</th></tr></thead><tbody>';
+        data.resultado.slice(0, 25).forEach((lic, i) => {
+            html += `
+                <tr>
+                    <td><strong>${lic.numero_aviso || i + 1}</strong></td>
+                    <td>${lic.uasg || '-'}</td>
+                    <td>${lic.data_publicacao || '-'}</td>
+                    <td>${lic.modalidade || '-'}</td>
+                    <td>${(lic.objeto || '-').substring(0, 80)}${(lic.objeto || '').length > 80 ? '...' : ''}</td>
+                </tr>`;
+        });
+        html += '</tbody></table>';
+        resultadoEl.innerHTML = html;
+        resultadoEl.querySelector('table').style.display = 'table';
+        
+    } catch (error) {
+        loadingEl.style.display = 'none';
+        infoEl.innerHTML = `❌ Erro na API: ${error.message}<br>
+        <small>📋 UASG: ${uasg} | Período: ${datai || '*'} a ${dataf || '*'}</small>`;
+        infoEl.className = 'error';
+        infoEl.style.display = 'block';
+    }
+});
 </script>
+</body>
+</html>
