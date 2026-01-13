@@ -1,42 +1,43 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <title>Consulta Licitações ComprasNet</title>
-    <style>body { font-family: Arial; } table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #ddd; padding: 8px; }</style>
-</head>
-<body>
-    <h1>Consulta de Licitações</h1>
-    <form id="form-busca">
-        <label>UASG: <input type="number" id="uasg" placeholder="ex: 389144"></label>
-        <label>Objeto: <input type="text" id="objeto" placeholder="ex: medicamento"></label>
-        <button type="submit">Buscar</button>
-    </form>
-    <table id="tabela-resultados" style="display:none;">
-        <thead><tr><th>Nº Aviso</th><th>Objeto</th><th>UASG</th><th>Data Publicação</th></tr></thead>
-        <tbody></tbody>
-    </table>
-    <script>
-        document.getElementById('form-busca').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const uasg = document.getElementById('uasg').value;
-            const objeto = document.getElementById('objeto').value;
-            const params = new URLSearchParams({ uasg, objeto }).toString();
-            const url = `https://api.allorigins.win/raw?url=${encodeURIComponent('http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?' + params)}`;
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                const tbody = document.querySelector('#tabela-resultados tbody');
-                tbody.innerHTML = '';
-                data.resultado.forEach(lic => {
-                    const row = `<tr><td>${lic.numero_aviso}</td><td>${lic.objeto}</td><td>${lic.uasg}</td><td>${lic.data_publicacao}</td></tr>`;
-                    tbody.innerHTML += row;
-                });
-                document.getElementById('tabela-resultados').style.display = 'table';
-            } catch (error) {
-                alert('Erro na busca: ' + error);
-            }
+<script>
+document.getElementById('form-busca').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const uasg = document.getElementById('uasg').value.trim();
+    const objeto = document.getElementById('objeto').value.trim();
+    if (!uasg && !objeto) {
+        alert('Informe UASG ou objeto!');
+        return;
+    }
+    const params = new URLSearchParams();
+    if (uasg) params.append('uasg', uasg);
+    if (objeto) params.append('objeto', objeto);
+    params.append('limit', '50'); // Limita resultados
+    const apiUrl = `http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?${params}`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+    const tabela = document.getElementById('tabela-resultados');
+    try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (!data.resultado || data.resultado.length === 0) {
+            alert('Nenhum resultado encontrado.');
+            return;
+        }
+        const tbody = tabela.querySelector('tbody');
+        tbody.innerHTML = '';
+        data.resultado.slice(0, 20).forEach(lic => { // Primeiros 20
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${lic.numero_aviso || ''}</td>
+                <td>${lic.objeto || ''}</td>
+                <td>${lic.uasg || ''}</td>
+                <td>${lic.data_publicacao || ''}</td>
+            `;
+            tbody.appendChild(row);
         });
-    </script>
-</body>
-</html>
+        tabela.style.display = 'table';
+    } catch (error) {
+        console.error(error);
+        alert(`Erro: ${error.message}. Tente UASG=389144.`);
+    }
+});
+</script>
