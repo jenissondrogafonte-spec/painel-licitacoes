@@ -1,38 +1,20 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Licitações ComprasNet</title>
-<style>body{font-family:sans-serif;max-width:1000px;margin:auto;padding:20px}form input,form button{width:100%;padding:10px;margin:5px 0}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px}th{background:#007cba;color:white}</style>
-</head>
-<body>
-<h1>Consulta Licitações ComprasNet - PE</h1>
-<form id="busca">
-<input id="uasg" placeholder="UASG ex: 926150" value="926150"><br>
-<input id="datai" type="date" value="2025-01-01"><br>
-<input id="dataf" type="date" value="2026-01-13"><br>
-<button type="submit">Buscar</button>
-</form>
-<div id="resultado"></div>
-
 <script>
 document.getElementById('busca').onsubmit=async(e)=>{
 e.preventDefault();
 const uasg=document.getElementById('uasg').value;
 const datai=document.getElementById('datai').value;
 const dataf=document.getElementById('dataf').value;
-const url=`https://api.allorigins.win/raw?url=${encodeURIComponent('http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?uasg=${uasg}&data_publicacao_min=${datai}&data_publicacao_max=${dataf}&limit=20')}`;
+const url=`https://dadosabertos.compras.gov.br/api/v1/licitacoes?uasg=${uasg}&data_publicacao_min=${datai}&data_publicacao_max=${dataf}&limit=20`;
 document.getElementById('resultado').innerHTML='<p>Carregando...</p>';
 try{
 const r=await fetch(url);
 const d=await r.json();
 let html='<table><tr><th>Nº</th><th>UASG</th><th>Data</th><th>Objeto</th></tr>';
 if(d.resultado&&d.resultado.length){
-d.resultado.forEach((l,i)=>html+=`<tr><td>${l.numero_aviso||i+1}</td><td>${l.uasg||'-'}</td><td>${l.data_publicacao||'-'}</td><td>${l.objeto?.slice(0,100)||'-'}</td></tr>`);
-}else html+='<tr><td colspan=4>Nenhum resultado</td></tr>';
+d.resultado.forEach((l,i)=>html+=`<tr><td>${l.numero_aviso}</td><td>${l.uasg}</td><td>${l.data_publicacao}</td><td>${l.objeto?.slice(0,80)}</td></tr>`);
+}else html+='<tr><td colspan=4>0 resultados UASG '+uasg+'</td></tr>';
 html+='</table>';
 document.getElementById('resultado').innerHTML=html;
-}catch{ document.getElementById('resultado').innerHTML='<p style="color:red">Erro API. UASG 926150 tem dados?</p>'; }
+}catch(e){document.getElementById('resultado').innerHTML='<p>Erro: '+e+'<br>Teste: <a href="https://dadosabertos.compras.gov.br/api/v1/licitacoes?uasg=926150" target="_blank">API direta</a></p>';}
 }
 </script>
-</body>
-</html>
