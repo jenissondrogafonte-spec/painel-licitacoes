@@ -1,31 +1,66 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-<title>Teste Licitações</title>
-<style>body{font-family:sans-serif;padding:20px;max-width:1000px;margin:auto}input,button{padding:12px;font-size:16px;width:100%;margin:5px 0;border-radius:5px;border:1px solid #ccc}button{background:#007cba;color:white;border:none;cursor:pointer}</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<title>Licitações ComprasNet - Funciona!</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:1200px;margin:auto;padding:20px;background:#f0f2f5}
+h1{color:#1d4ed8;font-size:2.5em;text-align:center}
+.card{background:white;padding:30px;border-radius:15px;box-shadow:0 8px 32px rgba(0,0,0,0.1);margin:20px 0}
+input,button{padding:15px;font-size:18px;width:100%;border-radius:10px;border:2px solid #e5e7eb;margin:10px 0;box-sizing:border-box}
+input:focus{border-color:#1d4ed8;outline:none}
+button{background:#059669;color:white;border:none;cursor:pointer;font-weight:bold}
+button:hover{background:#047857}
+.api-link{background:#fef3c7;padding:20px;border-radius:10px;border-left:6px solid #f59e0b;margin:20px 0}
+.api-link a{color:#b45309;font-weight:bold;font-size:16px;text-decoration:none}
+table{width:100%;border-collapse:collapse;margin:20px 0;background:white;border-radius:10px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+th{background:#1d4ed8;color:white;padding:15px;font-weight:bold}
+td{padding:12px;border-bottom:1px solid #f3f4f6}
+tr:nth-child(even){background:#f9fafb}
+tr:hover{background:#eff6ff}
+@media(max-width:768px){body{padding:10px}}
+</style>
 </head>
 <body>
-<h1>🧪 Teste Rápido Licitações</h1>
-<form>
-<input placeholder="Digite UASG (926150)" id="u">
-<button onclick="buscar()">Buscar</button>
-</form>
-<div id="out">Clique Buscar para testar API</div>
+<h1>✅ Painel Licitações ComprasNet PE</h1>
+
+<div class="card">
+<h2>🎯 Busca Rápida</h2>
+<input id="uasg" value="926150" placeholder="UASG">
+<button onclick="gerarLink()">🔗 Gerar Link API</button>
+<div id="linkapi" class="api-link" style="display:none">
+<strong>🔗 Copie e abra este link:</strong><br>
+<a id="linkgerado" href="#" target="_blank">Clique para ver licitações</a>
+</div>
+</div>
+
+<div class="card">
+<h2>📋 Exemplos Testados</h2>
+<a href="http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?uasg=926150&limit=20" target="_blank" class="api-link">
+<strong>SEAD-PE (926150)</strong> - 20 licitações recentes
+</a>
+<a href="http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?uasg=389144&limit=20" target="_blank" class="api-link">
+<strong>Saúde Federal (389144)</strong> - Teste com muitos dados
+</a>
+<a href="http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?uasg=925229&limit=20" target="_blank" class="api-link">
+<strong>Saúde PE Federal (925229)</strong> - Pernambuco
+</a>
+</div>
+
+<div class="card">
+<h2>📊 Últimas Licitações SEAD-PE</h2>
+<iframe src="http://compras.dados.gov.br/licitacoes/v1/licitacoes.html?uasg=926150" width="100%" height="600" style="border:none;border-radius:10px"></iframe>
+</div>
 
 <script>
-function buscar(){
-const u=document.getElementById('u').value||'926150';
-document.getElementById('out').innerHTML='Testando UASG '+u+'...';
-fetch('https://api.allorigins.win/get?url=http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?uasg='+u+'&limit=5')
-.then(r=>r.json())
-.then(d=>JSON.parse(d.contents))
-.then(data=>{
-if(data.resultado&&data.resultado.length){
-let t='<h3>✅ '+data.resultado.length+' resultados:</h3><table border=1><tr><th>Nº</th><th>UASG</th><th>Data</th><th>Objeto</th></tr>';
-data.resultado.slice(0,5).forEach(l=>t+='<tr><td>'+l.numero_aviso+'</td><td>'+l.uasg+'</td><td>'+l.data_publicacao+'</td><td>'+l.objeto.slice(0,50)+'</td></tr>');
-document.getElementById('out').innerHTML=t+'</table>';
-}else document.getElementById('out').innerHTML='❌ 0 resultados UASG '+u;
-}).catch(e=>document.getElementById('out').innerHTML='❌ Erro: '+e);
+function gerarLink(){
+const uasg=document.getElementById('uasg').value;
+const link='http://compras.dados.gov.br/licitacoes/v1/licitacoes.json?uasg='+uasg+'&limit=50';
+document.getElementById('linkgerado').href=link;
+document.getElementById('linkgerado').textContent=link;
+document.getElementById('linkapi').style.display='block';
+document.getElementById('linkapi').scrollIntoView();
 }
 </script>
 </body>
